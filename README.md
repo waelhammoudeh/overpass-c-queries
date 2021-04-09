@@ -54,8 +54,11 @@ Last; nothing is perfect and everything can be improved.
 
 An Example:
  
- The "xrds2gps" directory contain an example program with a makefile to build.
+ The "xrds2gps" directory contains an example program with a makefile to build.
  Note that the input file and data I use is for Phoenix, Arizona.
+ I should mention the quick call to getStreetNames() in that example was just
+ that quick lazy call. That query is simple for a reason, and it is worthy of
+ its own example and documentation ... that is first in my TODO list.
 
 Questions are welcome, send me am email or a tweet ...
 
