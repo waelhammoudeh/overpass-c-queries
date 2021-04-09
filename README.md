@@ -52,6 +52,11 @@ README.md file.
 
 Last; nothing is perfect and everything can be improved.
 
+An Example:
+ 
+ The "xrds2gps" directory contain an example program with a makefile to build.
+ Note that the input file and data I use is for Phoenix, Arizona.
+
 Questions are welcome, send me am email or a tweet ...
 
 
