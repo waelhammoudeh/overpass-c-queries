@@ -1,0 +1,50 @@
+This is the README.queries file. It is to document overpass queries included in
+this source directory specifically in overpass-c.c file.
+
+1) Get Cross Roads Query:
+
+ The query is defined in "xrdsFillTemplate()" function, as follows:
+ 
+    char *queryTemplate = "[out:csv(::lat,::lon,::count)]"
+                      "[bbox:%10.7f,%10.7f,%10.7f,%10.7f];"
+                      "(way['highway'!='service']['name'~'%s', i];>;)->.outNS;"
+                      "(way['highway'!='service']['name'~'%s', i];>;)->.outEW;"
+                      "node.outNS.outEW;"
+                      "out; out count;";   // do no include the '&' at the end
+                      // used single NOT double quotes above
+
+ Here is the script filled with bounding box values and two street names.
+Line # 
+   1)   [out:csv(::lat,::lon,::count)]
+   2)   [bbox:33.42176, -112.10096, 33.48058, -112.03];
+   3)   (way['highway'!='service']['name'~'North 19th Avenue', i];>;)->.outNS;
+   4)   (way['highway'!='service']['name'~'West Thomas Road', i];>;)->.outEW;
+   5)   node.outNS.outEW;
+   6)   out; out count;
+   
+ The single quote was used instead of double quote because we do not have to
+ escape the single quote in the HTTP call, less typing and easier to read.
+ 
+ Line one sets our output format to CSV and request latitude, longitude and
+ the count for returned elements. The default for this is to print a header,
+ you can turn that off by "false" switch. See "Output Formats" in the overpass
+ documentation.
+ 
+ Line two is the bounding box.
+ 
+ Lines three and four request node that is "way" with a tag named "highway" that
+ has a value NOT equal to "service" and that node has a tag named "name" with
+ value about "the street name" ignoring case (i). The > sign is for "Recursing"
+ down. This is important; this says to accumulate all nodes in one list for that
+ street. Then ->.outNS and ->.outEW are to give a name for that result. The end
+ result from those 2 lines are two lists named outNS - out North South - and
+ outEW - out East West -.
+ 
+ Line 5 gets the nodes in the UNION of the two lists - the common nodes between
+ the two lists.
+ 
+ Line 6 the first "out" is for output, and the second is to output the "count".
+
+2) Get Street Names Query: To be done. 
+   The query is simple but the story is loooooooong!
+   
