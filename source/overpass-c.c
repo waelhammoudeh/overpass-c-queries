@@ -137,6 +137,16 @@ char *xrdsFillTemplate (XROADS *xrds, BBOX *bbox){
 	// the two roads members should be set in the struct
 	ASSERTARGS(xrds->firstRD && xrds->secondRD);
 
+	if ( ! isBbox(bbox)){
+
+		printf("xrdsFillTemplate(): Error isBbox() return FALSE! "
+				   "Invalid BOUNDING BOX.\n");
+		//return ztInvalidArg;
+		//FIXME xrdsFillTemplate() should return integer TODO
+
+		return retValue; // set to NULL -
+	}
+
 	/* Note for snprintf(): the return type is of "size_t" AND if the return
 	 * value is (LONG_LINE * 2) or more that means that the output was
 	 * truncated - partial copy is an error.
@@ -148,7 +158,8 @@ char *xrdsFillTemplate (XROADS *xrds, BBOX *bbox){
 
 	if (result > (LONG_LINE * 2) ){
 
-		printf ("xrdsFillTemplate(): Error, tmpBuf size of (LONG_LINE * 2) is TOO SMALL.\n");
+		printf ("xrdsFillTemplate(): Error, QUERY buffer - tmpBuf size of "
+				"(LONG_LINE * 2) is TOO SMALL.\n");
 //return ztSmallBuf; // I return char* FIXME make return integer - else set global error
 		return NULL;
 	}
@@ -202,7 +213,8 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 	 * "[out:csv(::lat,::lon,::count ; false)]"
 	 *
 	 * So with this out of the way, we examine the first line and compare
-	 * it to the expected header before we proceed
+	 * it to the expected header before we proceed, an okay response is
+	 * one that has a header which matches our expected header.
 	 ************************************************************************/
 
 	result = isOkResponse (myDataStruct.memory, hdrSignature);
@@ -227,6 +239,8 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 
 /* isOkResponse(): remote server response is okay if first line in the
  * response matches header. - see comment in curlGetXrdsGPS() func
+ * Question? : I am hoping this tells me the query was understood by
+ * the server; the query syntax was correct.
  */
 
 int isOkResponse (char *response, char *header){
@@ -269,11 +283,31 @@ int isOkResponse (char *response, char *header){
 	return retCode;
 }
 
-int checkBbox(BBOX *bbox){
+/* isBbox() : function checks that the structure pointed to by bbox holds
+ * a valid bounding box as defined by Overpass API; that is the south-west
+ * POINT is really south-west relative to north-east POINT.
+ * Return: function returns TRUE if structure holds a valid bounding box and
+ * FALSE otherwise.
+ * Note: this replaces the never implemented checkBbox().
+ ***************************************************************************/
+int isBbox(BBOX *bbox){
 
-	printf("checkBbox(): NOT implemented yet. \n");
+	ASSERTARGS (bbox);
 
-	return ztSuccess;
+	// maybe a lot of noise!?
+	if (bbox->sw.longitude > bbox->ne.longitude)
+		printf ("isBbox(): invalid member is: LONGITUDE.\n");
+
+	if (bbox->sw.latitude > bbox->ne.latitude)
+		printf ("isBbox(): invalid member is: LATITUDE.\n");
+
+	if ( (bbox->sw.longitude < bbox->ne.longitude) &&
+		  (bbox->sw.latitude < bbox->ne.latitude) )
+
+		return TRUE;
+
+	return FALSE;
+
 }
 
 int namesFillTemplate(char **dst, BBOX *bbox){
@@ -289,11 +323,13 @@ int namesFillTemplate(char **dst, BBOX *bbox){
 
 	*dst = NULL; // set value to return to NULL
 
-	result = checkBbox (bbox);
-	if (result != ztSuccess){
+	//result = checkBbox (bbox);
+	//if (result != ztSuccess){
+	if ( ! isBbox(bbox) ){
 
-		printf("namesFillTemplate(): Error returned by checkBbox().\n");
-		return result;
+		printf("namesFillTemplate(): Error isBbox() return FALSE! "
+				   "Invalid BOUNDING BOX.\n");
+		return ztInvalidArg;
 	}
 
 	result = snprintf (tmpBuf,  (LONG_LINE * 2), qryTemplate,

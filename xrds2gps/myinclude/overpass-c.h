@@ -62,5 +62,6 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 int isOkResponse (char *response, char *header);
 int namesFillTemplate(char **dst, BBOX *bbox);
 int getStreetNames (BBOX *bbox, char *server, char *dstFile);
+int isBbox(BBOX *bbox);
 
 #endif /* OVERPASS_C_H_ */
