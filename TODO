@@ -1,0 +1,13 @@
+This is the TODO list for overpass-c-functions.
+
+1) Implement saving downloaded data to file on disk.
+
+2) Get ride of code duplication in op-string.c file;
+   *) data is the same as wget file, work from there ... make the data AS the file
+   *) what about header files? internet - communication - headers?
+   
+3) Save all found nodes in an array, not just first found.
+
+4) make WKT for found nodes GPS and draw them with QGIS.
+
+   
