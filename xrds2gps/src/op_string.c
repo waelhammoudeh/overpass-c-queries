@@ -328,10 +328,11 @@ int parseCurlXrdsData (XROADS *xrds, void *data){
  * server. Fills dst (XROADS struct) members with parsed values for structure
  * members point (with longitude and latitude) also the nodesFound member.
  *
- */
+ * The second parameter is of type "void" because this function is called with
+ * a function pointer, the same as parseCurlXrdsData(). The two functions
+ * need to have the SAME exact prototype
+ ****************************************************************************/
 int parseWgetXrdsFile (XROADS *dst, void *filename){
-	/* void* because of function pointer call,
-	as I understand we need to have exact match */
 
 	DL_LIST		*outFileDL;
 	int				result;
@@ -411,8 +412,11 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 
 	return ztSuccess;
 }
-/* response2LineDL() : function parses overpass response for street names query
- * lines are placed in double linked list.
+/* response2LineDL() : function parses overpass response - gets white space
+ * clean tokens - for street for street names query
+ * lines are placed in double linked list of pointers to CHARACTER STRINGS.
+ * In parseCurlXrdsData() the pointer in the list is to LINE_INFO structure; to
+ * match file2List() parameters!
  *******************************************************************************/
 int response2LineDL (DL_LIST *dstDL, char *response){
 
