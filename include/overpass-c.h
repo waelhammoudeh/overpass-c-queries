@@ -39,8 +39,9 @@ typedef struct XROADS_ {
 
 	char				*firstRD, *secondRD;
 	POINT			point;
-//	HB_POINT	hbpnt;
 	int				nodesFound;
+	GPS_PT		*nodesGPS[]; // this limits structure future modification
+
 } XROADS;
 
 /* macros to validate longitude and latitude values in the
