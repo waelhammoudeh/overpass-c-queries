@@ -193,9 +193,12 @@ int xrdsParseNames(XROADS *dest, char *str){
 	return ztSuccess;
 }
 
-int parseGPS(XROADS *dst, char *str){
+
+int parseGPS (GPS_PT *dst, char *str){
 /* parse GPS point latitude and longitude members (overpass result line)
- * <	33.5605235		-112.0652852	> store result in dst members */
+ * <	33.5605235		-112.0652852	> store result in dst members
+ * dst is pointer to GPS_PT structure in parseGPS2()
+ * was XROADS pointer in parseGPS() - earlier function */
 	char			*myStr;
 	char			*delim = "\040\t";
 	char			*token1, *token2;
@@ -212,52 +215,54 @@ int parseGPS(XROADS *dst, char *str){
 	token2 = strtok(NULL, delim);
 
 	if ((token1 == NULL ) || (token2 == NULL )) {
-		printf("str2GPS(): Error; could not a get token! One of two is NULL.\n");
+		printf("parseGPS2(): Error; could not a get token! One of two is NULL.\n");
 			return ztGotNull;
 	}
 
-	removeSpaces(&token1);
+	// removeSpaces(&token1); wrong! strtok() does this already
 
 	if(strspn(token1, allowed) != strlen(token1)){ // disallowed char found
-		printf("str2GPS(): Disallowed character in token number 1.\n");
+		printf("parseGPS2(): Disallowed character in token number 1.\n");
 		return ztDisallowedChar;
 	}
 
 	numLat = (double) strtod (token1, &endPtr);
 	if (*endPtr != '\0') {
-		printf("str2GPS(): Error invalid token for double: <%s>.\n", token1);
+		printf("parseGPS2(): Error invalid token for double: <%s>.\n", token1);
 		return ztInvalidToken;
 	}
 
 	if (! LATITUDE_OK(numLat)){
-		printf("str2GPS(): Error; invalid Phoenix latitude. <%f>\n", numLat);
+		printf("parseGPS2(): Error; invalid Phoenix latitude. <%f>\n", numLat);
 		return ztInvalidToken;
 	}
 
-	removeSpaces(&token2);
+	// removeSpaces(&token2);
 
 	if(strspn(token2, allowed) != strlen(token2)){ // disallowed char found
-		printf("str2GPS(): Disallowed character in token number 2.\n");
+		printf("parseGPS2(): Disallowed character in token number 2.\n");
 		return ztDisallowedChar;
 	}
 
 	numLng = (double) strtod (token2, &endPtr);
 	if (*endPtr != '\0') {
-		printf("str2GPS(): Error invalid token for double: <%s>.\n", token2);
+		printf("parseGPS2(): Error invalid token for double: <%s>.\n", token2);
 		return ztInvalidToken;
 	}
 
 	if (! LONGITUDE_OK (numLng)){
-		printf("getBBox(): Error; invalid Phoenix longitude. <%f>\n", numLng);
+		printf("parseGPS2(): Error; invalid Phoenix longitude. <%f>\n", numLng);
 		return ztInvalidToken;
 	}
 
 	// assign values
-	dst->point.longitude = numLng;
-	dst->point.latitude = numLat;
+	dst->longitude = numLng;
+	dst->latitude = numLat;
 
 	return ztSuccess;
 }
+
+
 
 int parseCurlXrdsData (XROADS *xrds, void *data){
 
@@ -314,10 +319,13 @@ int parseCurlXrdsData (XROADS *xrds, void *data){
 	result = parseXrdsResult (xrds, &linesList);
 	if (result != ztSuccess){
 
-		printf ("parseCurlXrdsFile(): Error returned by parseOverpassResult().\n");
+		printf ("parseCurlXrdsData(): Error returned by parseOverpassResult().\n");
 		destroyDL(&linesList);
 		return result;
 	}
+
+	 printf ("parseCurlXrdsData(): Printing CURRENT XROADS structure:\n");
+	 printXrds (xrds);
 
 	destroyDL(&linesList);
 
@@ -380,9 +388,12 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 	LINE_INFO	*lineInfo;
 	int				numFound;
 	char				*str;
-	int				result;
+	int				iCount, result;
 
 	ASSERTARGS (dstXrds && srcDL);
+
+	// set first nodesGPS pointer to NULL; change below when nodes found
+	dstXrds->nodesGPS[0] = NULL;
 
 	// last line has the number of returned nodes found
 	elem = DL_TAIL(srcDL);
@@ -398,19 +409,45 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 
 		 return ztSuccess;
 
-	 // found intersection: parse latitude & longitude AND fill xrds members
+	 // found intersection(s), parse them all and stuff'em in GPS_PT array
+	 /* allocate pointers in the array for the numFound plus one, last will
+	  * be set to NULL.
+	  */
+	 for (iCount = 0; iCount < numFound; iCount++){
+
+		 dstXrds->nodesGPS[iCount] = (GPS_PT *)  malloc(sizeof(GPS_PT));
+		 if ( ! dstXrds->nodesGPS[iCount] ){
+			 printf ("parseXrdsResult(): Error allocating memory.\n");
+			 return ztMemoryAllocate;
+		 }
+	 }
+	 dstXrds->nodesGPS[numFound] = NULL;
+
+	 /* we have enough allocated pointers, each line starting at second line
+	  * has a GPS point, point at the second line in the source list, fill 'em up */
 	 elem = DL_HEAD(srcDL);
 	 elem = DL_NEXT(elem); // second line
 
-	 lineInfo = DL_DATA(elem);
-	 str = (char *)lineInfo->string; // this IS the first node found
-	 result = parseGPS(dstXrds, str);
-	 if (result != ztSuccess) {
-		 printf ("parseOverpassResult(): Error returned by parseGPS().\n");
-		 return result;
+	 for (iCount = 0; iCount < numFound; iCount++, elem = DL_NEXT(elem)){
+
+		 ASSERTARGS (elem);
+
+		 lineInfo = DL_DATA(elem);
+		 str = (char *)lineInfo->string;
+
+		 result = parseGPS (dstXrds->nodesGPS[iCount], str);
+		 if (result != ztSuccess) {
+			 printf ("parseXrdsResult(): Error returned by parseGPS2().\n");
+			 return result;
+		 }
+
 	 }
 
-	return ztSuccess;
+	 // set XRDOADS point member to first GPS found
+	 dstXrds->point.longitude = dstXrds->nodesGPS[0]->longitude;
+	 dstXrds->point.latitude= dstXrds->nodesGPS[0]->latitude;
+
+	 return ztSuccess;
 }
 /* response2LineDL() : function parses overpass response - gets white space
  * clean tokens - for street for street names query
@@ -451,3 +488,27 @@ int response2LineDL (DL_LIST *dstDL, char *response){
 	return ztSuccess;
 
 }
+
+void printXrds (XROADS *xrds){ // partial - half-assed job
+
+	int	iCount;
+
+	ASSERTARGS (xrds);
+
+	printf ("[%s, %s]  (%10.7f, %10.7f) FOUND: %d nodes.\n",
+			  xrds->firstRD, xrds->secondRD,
+			  xrds->point.longitude, xrds->point.latitude,
+			  xrds->nodesFound);
+	printf("\tNodes Found Total [ %d ] :\n", xrds->nodesFound);
+
+	for (iCount = 0; iCount < xrds->nodesFound; iCount++)
+
+		printf("\t (%10.7f, %10.7f)\n",
+				xrds->nodesGPS[iCount]->longitude,
+				xrds->nodesGPS[iCount]->latitude);
+
+
+
+	return;
+}
+
