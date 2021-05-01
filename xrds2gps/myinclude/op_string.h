@@ -19,10 +19,12 @@ int parseCurlXrdsData (XROADS *xrds, void *data);
 
 int parseWgetXrdsFile (XROADS *dst, void *filename);
 
-int parseGPS(XROADS *dst, char *str);
-
 int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL);
 
 int response2LineDL (DL_LIST *dstDL, char *response);
+
+int parseGPS (GPS_PT *dst, char *str);
+
+void printXrds (XROADS *xrds);
 
 #endif /* OP_STRING_H_ */
