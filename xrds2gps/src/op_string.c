@@ -1,6 +1,6 @@
-/* op_string.c file string handling functions for my c overpass functions.
+/* op_string.c : this file has overpass string handling functions.
  * I have some string functions in the util.c file. Functions here are mostly
- * for parsing strings.
+ * for parsing string data related to overpass.
  ***********************************************************************/
 #include <stdio.h>
 #include <string.h>
@@ -311,7 +311,7 @@ int parseCurlXrdsData (XROADS *xrds, void *data){
 
 	} // end while(ptr) or parse lines.
 
-	result = parseOverpassResult (xrds, &linesList);
+	result = parseXrdsResult (xrds, &linesList);
 	if (result != ztSuccess){
 
 		printf ("parseCurlXrdsFile(): Error returned by parseOverpassResult().\n");
@@ -351,7 +351,7 @@ int parseWgetXrdsFile (XROADS *dst, void *filename){
 		return result;
 	}
 
-	result = parseOverpassResult (dst, outFileDL);
+	result = parseXrdsResult (dst, outFileDL);
 	if (result != ztSuccess){
 
 		printf ("parseWgetXrdsFile(): Error returned by parseOverpassResult().\n");
@@ -373,7 +373,7 @@ int parseWgetXrdsFile (XROADS *dst, void *filename){
  * and last line has the number of nodes found, it is zero if no common
  * nodes were found.
  */
-int parseOverpassResult (XROADS *dstXrds, DL_LIST *srcDL){
+int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 
 	DL_ELEM		*elem;
 	LINE_INFO	*lineInfo;

@@ -102,7 +102,6 @@ int main(int argc, char* const argv[]) {
 		return EXIT_FAILURE;
 	}
 
-
 	/* parse the SERVICE_URL -- using parse_url() function here.
 	 * Note that there is a libcurl function doing the same thing!
 	 * curl_url_get() was added in version 7.62.0
@@ -428,6 +427,7 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 
 		xrds = (XROADS *) elem->data;
 
+		// try me with both methods; Post & Get. One at a time!
 		//result = curlGetXrdsGPS (xrds, bbox, server, Post, parseCurlXrdsData);
 		result = curlGetXrdsGPS (xrds, bbox, server, Get, parseCurlXrdsData);
 		if (result != ztSuccess){
@@ -435,7 +435,7 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 			return result;
 		}
 
-		//write formated
+		//write result formated
 		char name[71] = {0};
 		char gps[36] = {0};
 		sprintf(name, "[ %s & %s ]", xrds->firstRD, xrds->secondRD);
@@ -443,7 +443,7 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 		if (xrds->nodesFound == 0)
 			sprintf(gps, " ----    Not Found   ---- ");
 
-		fprintf (outFP, "%6d  %-68s %26s %6d\n",
+		fprintf (outFP, "%6d  %-50s %26s %6d\n",				// name field 50 from 68
 				      elemNum, name, gps, xrds->nodesFound);
 
 		elemNum++;
@@ -456,11 +456,11 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 	/* start of get street name here. maybe not the best place for it, but at
 	 * this point we have all we need to show an example usage: we have
 	 * the bounding box "bbox" the URL to server "server" and we have not
-	 * closed curl session. we need an output file name!
+	 * closed curl session yet. we need an output file name!
 	 */
 
 
-getStreetNames (bbox, server, "somefilename");
+// getStreetNames (bbox, server, "somefilename"); needs own program!
 
 	curlCloseSession();
 
