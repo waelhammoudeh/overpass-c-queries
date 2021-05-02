@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "overpass-c.h"
+#include "xrds2gps.h"
 #include "util.h"
 #include "ztError.h"
 #include "curl_func.h"
@@ -198,6 +199,18 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 		printf("curlGetXrdsGPS(): Error returned from curlMemoryDownload()!\n"
 				" The error was: %s\n\n", code2Msg (result));
 		return result;
+	}
+
+	/* write received data to raw data file if rawDataFP is set */
+	if (rawDataFP){
+
+		fprintf (rawDataFP, "Data for cross roads: [ %s && %s ]\n\n",
+				xrds->firstRD, xrds->secondRD);
+
+		fprintf (rawDataFP, "%s", myDataStruct.memory);
+		fprintf (rawDataFP, "\n ++++++++++++++++++++++++++++++++++++++++++++++++\n\n");
+		fflush (rawDataFP);
+
 	}
 
 	/* the above function call and a successful result test ONLY tell us that

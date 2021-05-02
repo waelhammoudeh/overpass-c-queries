@@ -14,6 +14,7 @@
 #include <errno.h> // error number used with fopen() call
 
 #include <curl/curl.h>
+#include "xrds2gps.h"
 
 #include "overpass-c.h"
 #include "util.h"
@@ -24,21 +25,9 @@
 #include "curl_func.h"
 #include "op_string.h"
 
-// functions prototype
-int getXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
-int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
-
-/* it is a mistake to tag a slash at the end of the path */
-#define	SERVICE_URL		"http://localhost/api/interpreter"
-//#define	SERVICE_URL		"http://127.0.0.1/api/interpreter"
-//#define	SERVICE_URL		"http://www.overpass-api.de/api/interpreter"
-//#define	SERVICE_URL		"http://yafa.local/api/interpreter"
-//#define	SERVICE_URL		"http://lazyant.local/api/interpreter"
-//#define	SERVICE_URL		"http://lazyant/api/interpreter"
-
-#define	NUM_TRIES	3
 
 const char *prog_name;  // prog_name is global
+FILE	*rawDataFP = NULL; // wrong place for this FIXME
 
 int main(int argc, char* const argv[]) {
 
@@ -289,10 +278,10 @@ int main(int argc, char* const argv[]) {
 
 	destroyDL(xrdsList);
 	free(xrdsList);
-
+/*
 	if (myString)
 		free(myString);
-
+*/
 	if (urlParsed)
 		parsed_url_free(&urlParsed);
 
@@ -389,6 +378,10 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 	FILE				*outFP;
 	int				result;
 
+#ifdef DEBUG_QUERY
+	char				rawDataFileName[PATH_MAX] = {0};
+#endif
+
 	//do not allow nulls
 	ASSERTARGS(xrdsDL && bbox && server && outDir);
 
@@ -414,11 +407,42 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 	outFP = fopen(outFileALL, "w");
 
 	if ( outFP == NULL){
-		printf ("getXrdsDL(): Error could not create destination file! <%s>\n", &(outFileALL[0]));
+		printf ("curlGetXrdsDL(): Error could not create destination file! <%s>\n", &(outFileALL[0]));
 		printf("  ^^ System error message: %s\n\n", strerror(errno));
 		return ztCreateFileErr;
 	}
 
+	/* make raw-data file name - raw-data file is created only if we want to
+		debug query output, raw data will be written when query is done by
+		curlGetXrdsGPS() function. We use one file for the session.
+		The file name will be {INPUTFILE}-RAW_DATA (input file name only with
+		"RAW_DATA" appended to it, and created in the session output directory
+		The rawDataFP - raw data file pointer is global!
+		Created "xrds2gps.h" to make globals available for files that include it,
+		The idea is right ... but if we were to make a library for curl functions
+		this is NOT the right place for our defines and globals! FIXME
+	*/
+#ifdef DEBUG_QUERY
+
+	if (IsSlashEnding(outDir))
+		sprintf(rawDataFileName, "%s%s-RAW_DATA", outDir, outPrefix);
+	else
+		sprintf(rawDataFileName, "%s/%s-RAW_DATA", outDir, outPrefix);
+
+	errno = 0;
+	rawDataFP = fopen(rawDataFileName, "w");
+
+	if ( rawDataFP == NULL){
+		printf ("curlGetXrdsDL(): Error could not create destination file! <%s>\n", &(rawDataFileName[0]));
+		printf("  ^^ System error message: %s\n\n", strerror(errno));
+		return ztCreateFileErr;
+	}
+
+	fprintf (rawDataFP, "This is the raw data received from curl query.\n");
+
+#endif
+
+	// write heading in output file
 	fprintf (outFP, " Elem #                              Cross Roads                              GPS (Longitude, Latitude)  Nodes Found\n");
 	fprintf (outFP, "====================================================================================================================\n\n");
 
@@ -431,7 +455,7 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 		//result = curlGetXrdsGPS (xrds, bbox, server, Post, parseCurlXrdsData);
 		result = curlGetXrdsGPS (xrds, bbox, server, Get, parseCurlXrdsData);
 		if (result != ztSuccess){
-			printf("getXrdsDL(): Error returned from getXrdsGPS() function\n\n");
+			printf("curlGetXrdsDL(): Error returned from curlGetXrdsGPS() function\n\n");
 			return result;
 		}
 
@@ -452,6 +476,13 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 	} //end while(elem)
 
 	fclose(outFP);
+
+#ifdef DEBUG_QUERY
+
+	fflush(rawDataFP);
+	fclose(rawDataFP);
+
+#endif
 
 	/* start of get street name here. maybe not the best place for it, but at
 	 * this point we have all we need to show an example usage: we have
