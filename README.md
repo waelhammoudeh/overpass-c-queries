@@ -59,6 +59,13 @@ An Example:
  I should mention the quick call to getStreetNames() in that example was just
  that quick lazy call. That query is simple for a reason, and it is worthy of
  its own example and documentation ... that is first in my TODO list.
+ 
+ Note: Implemented saving received curl data in memory to disk. 
+ With "#define DEBUG_QUERY" set in xrds2gps.h file, a file is created for the
+ session in the output directory with "-RAW_DATA" appended to input file name.
+ This is intended to be used with curl library functions only, no guarding is
+ done when used with "wget" call, if used that way the result may surprise you
+ since I did not test that yet. The implementation still needs fine tuning :)
 
 Questions are welcome, send me am email or a tweet ...
 
