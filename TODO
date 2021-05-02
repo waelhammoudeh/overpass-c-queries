@@ -1,13 +1,16 @@
 This is the TODO list for overpass-c-functions.
 
-1) Implement saving downloaded data to file on disk.
+1) Fix raw data writing implementation! Think of curl func library exporting
+   variables for debugging query. The client / user should not define this
+   behaviour, the user should be able to just use do "#define DEBUG_QUERY" for
+   this to work.
 
-2) Get ride of code duplication in op-string.c file;
-   *) data is the same as wget file, work from there ... make the data AS the file
-   *) what about header files? internet - communication - headers?
+   Note: curl library can download data to disk, same data in memory can be
+   written to disk with another call to curl perform function ... then you may
+   not get the same response as the one before plus you have to make 2 calls
+   to query server. This was NOT what I wanted. I implemented exactly what I
+   wanted by writing recieved data as soon as I got it.
    
-3) Save all found nodes in an array, not just first found.
-
-4) make WKT for found nodes GPS and draw them with QGIS.
+2) make WKT for found nodes GPS to draw them with QGIS.
 
    
