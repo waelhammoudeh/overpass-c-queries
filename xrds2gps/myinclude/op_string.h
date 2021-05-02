@@ -27,4 +27,6 @@ int parseGPS (GPS_PT *dst, char *str);
 
 void printXrds (XROADS *xrds);
 
+char *gps2WKT (GPS_PT *gps);
+
 #endif /* OP_STRING_H_ */

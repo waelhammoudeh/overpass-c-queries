@@ -225,6 +225,9 @@ int main(int argc, char* const argv[]) {
 	  file a directory is created under "prog_name" with input file name only -
 	  we drop the extension. The output file name is made from input file name
 	  only with element number appended to it.
+
+	  For curl call, one output file is created under:
+	   $HOME/{prog_name}/{inputfile}/{inputfile}-CURL_ALL
 	 **************************************************************************/
 
 	home = getHome();
@@ -252,7 +255,7 @@ int main(int argc, char* const argv[]) {
 	ASSERTARGS( snprintf(outdir, PATH_MAX,
 			              "%s/%s", prog_dir, tempOut) < PATH_MAX);
 
-	result = myMkDir(outdir);
+	result = myMkDir(outdir); // creates directory if it does not exist
 	if (result != ztSuccess){
 
 		printf("%s: Error. Failed to create output directory at < %s >.\n",
@@ -272,22 +275,19 @@ int main(int argc, char* const argv[]) {
 	printf("%s is DONE successfully. Find output files in directory:\n"
 			  "\t %s\n\n", prog_name, outdir);
 
+// write WKT - Well Known Text - for POINTs
+// NEEDS TESTING !!! TODO FIXME
+writeXrdsDL_WKT (xrdsList, outdir);
+
 	// clean up
 	destroyDL(infileList);
 	free(infileList);
 
 	destroyDL(xrdsList);
 	free(xrdsList);
-/*
-	if (myString)
-		free(myString);
-*/
+
 	if (urlParsed)
 		parsed_url_free(&urlParsed);
-
-//int getStreetNames (BBOX *bbox, char *server, char *dstFile)
-
-//	getStreetNames (&bbox, service_url, "somefilename");
 
 	return EXIT_SUCCESS;
 
@@ -496,4 +496,65 @@ int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir){
 	curlCloseSession();
 
 	return ztSuccess;
-}
+
+} // END curlGetXrdsDL()
+
+/* toDir is assumed to have input file name as the last entry */
+int writeXrdsDL_WKT (DL_LIST *xrdsDL, char *toDir){
+
+	char		outFileName[PATH_MAX] = {0};
+	char		*outPrefix;
+	FILE		*fileFP;
+	char		*marker = "wkt;";
+
+	DL_ELEM	*elem;
+	XROADS	*xrds;
+	GPS_PT	**gpsMover;
+	char			*wktGPS;
+
+
+	ASSERTARGS (xrdsDL && toDir);
+
+	// stitch output file name; {INPUTFILE}-WKT.csv
+	outPrefix = lastOfPath(toDir); //this is input file name only - should be
+	if (IsSlashEnding(toDir))
+		sprintf(outFileName, "%s%s-WKT.csv", toDir, outPrefix);
+	else
+		sprintf(outFileName, "%s/%s-WKT.csv", toDir, outPrefix);
+
+	errno = 0;
+	fileFP = fopen(outFileName, "w");
+
+	if ( fileFP == NULL){
+		printf ("writeXrdsDL_WKT(): Error could not create destination file! <%s>\n", &(outFileName[0]));
+		printf("  ^^ System error message: %s\n\n", strerror(errno));
+		return ztCreateFileErr;
+	}
+
+	fprintf (fileFP, "%s\n", marker); // check return
+
+	elem = DL_HEAD(xrdsDL);
+	while(elem){
+
+		xrds = (XROADS *) elem->data;
+
+		gpsMover = xrds->nodesGPS;
+		while (*gpsMover){ // when we did not find cross node, this stayed NULL
+
+			wktGPS =gps2WKT ( *gpsMover );
+			fprintf(fileFP, "%s\n", wktGPS);
+
+			gpsMover++;
+		}
+
+		elem = DL_NEXT(elem);
+
+	} // end while(elem)
+
+	fclose (fileFP);
+
+	//printf ("writeXrdsDL_WKT(): toDir is < %s > BOTTOM of FUNCTION \n", toDir);
+
+	return ztSuccess;
+
+} // END  writeXrdsDL_WKT()

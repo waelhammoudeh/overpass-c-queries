@@ -8,7 +8,10 @@
 
 // functions prototype
 int getXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
+
 int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
+
+int writeXrdsDL_WKT (DL_LIST *xrdsDL, char *toDir);
 
 /* it is a mistake to tag a slash at the end of the path */
 #define	SERVICE_URL		"http://localhost/api/interpreter"

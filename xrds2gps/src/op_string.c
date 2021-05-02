@@ -512,3 +512,24 @@ void printXrds (XROADS *xrds){ // partial - half-assed job
 	return;
 }
 
+/* formats GPS as Well Known Text POINT: "POINT ((-111.917714 33.407882))"
+ * function allocates memory for buffer, no line feed is used. */
+char *gps2WKT (GPS_PT *gps){
+
+	char		*retPtr = NULL;
+	int		bufSize = 36;
+
+	ASSERTARGS (gps);
+
+	retPtr = (char *) malloc(sizeof(char) * bufSize);
+	if ( ! retPtr ){
+		printf ("gps2WKT(): Error allocating memory.\n");
+		return retPtr;
+	}
+	memset (retPtr, 0, bufSize);
+
+	sprintf (retPtr, "\"POINT ((%10.7f %10.7f))\"", gps->longitude, gps->latitude);
+
+	return retPtr;
+
+}
