@@ -8,8 +8,12 @@
 #ifndef OVERPASS_C_H_
 #define OVERPASS_C_H_
 
+#include <stdio.h>
 #include "curl_func.h"
 
+extern FILE *rawDataFP;
+
+// defined types
 typedef struct POINT_ {
 
 	double 	longitude,
@@ -40,7 +44,7 @@ typedef struct XROADS_ {
 	char				*firstRD, *secondRD;
 	POINT			point;
 	int				nodesFound;
-	GPS_PT		*nodesGPS[]; // this limits structure future modification
+	GPS_PT		*nodesGPS[]; // this limits structure future modification was: *nodesGPS[];
 
 } XROADS;
 
@@ -61,8 +65,16 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 		HTTP_METHOD method, int (*parseFunc) (XROADS *xrds, void *source));
 
 int isOkResponse (char *response, char *header);
+
 int namesFillTemplate(char **dst, BBOX *bbox);
+
 int getStreetNames (BBOX *bbox, char *server, char *dstFile);
+
 int isBbox(BBOX *bbox);
+
+int cloneXrds (XROADS **dest, XROADS *src);
+
+int initialXrds (XROADS **xrds, int numGPS);
+
 
 #endif /* OVERPASS_C_H_ */

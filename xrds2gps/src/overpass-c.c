@@ -16,6 +16,11 @@
 #include "op_string.h"
 #include "dList.h"
 
+/* user can declare as global variable, and open a file - received data will
+ * be written to that file. Declaration is in the overpass.h header file with:
+ * extern FILE *rawDataFP;
+ * and code in in curlGetXrdsGPS() function below. ***/
+
  /* getXrdsGPS(): Function retrieves the GPS for the FIRST common node - if
  * 		found - between two named roads from an OSM overpass server.
  *
@@ -200,6 +205,12 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 				" The error was: %s\n\n", code2Msg (result));
 		return result;
 	}
+
+/* client can define DEBUG_QUERY somewhere before calling us AND open a text
+ * file for writing with "rawDataFP" as the file pointer,
+ * the recieved data will be written to that file.
+ * This needs another visit ... I am spending way too much time on this
+ ******************************************************************************/
 
 	/* write received data to raw data file if rawDataFP is set */
 	if (rawDataFP){
@@ -447,6 +458,23 @@ printf("\ngetStreetNames(): START SORTED street names "
 	}
 
 printf("getStreetNames(): END SORTED street names.\n\n");
+
+
+	return ztSuccess;
+}
+
+/* XROADS structure has a pointer to an array (GPS points);
+ * memcpy() is not enough to do the job!
+ * We allocate memory for dest structure.
+ */
+int cloneXrds (XROADS **dest, XROADS *src){
+
+	ASSERTARGS (dest && src);
+
+	return ztSuccess;
+}
+
+int initialXrds (XROADS **xrds, int numGPS){
 
 
 	return ztSuccess;
