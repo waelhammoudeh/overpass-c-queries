@@ -47,6 +47,7 @@ int file2List (DL_LIST *list, char *filename){
 
 	ASSERTARGS(list && filename); //abort() on NULL pointer argument.
 
+
 	if(DL_SIZE(list) != 0){
 		printf("file2List(): Error argument list not empty.\n");
 		return ztListNotEmpty;
@@ -75,7 +76,6 @@ int file2List (DL_LIST *list, char *filename){
 		 *  is stored after the last character in the buffer. <-from man fgets.
 		 *  maybe check for \n? or line length with strlen()?
 		 *******************************************************************/
-
 		start = line;
 
 		// remove line feed - included by fgets()
@@ -263,3 +263,32 @@ int strList2File(char *dstFile, DL_LIST *list){
 
 	return ztSuccess;
 }
+
+/* toFile: file pointer to an open file, can be NULL. writeFunc() writes specific
+ * data type of data
+ */
+void writeDL (FILE *toFile, DL_LIST *list, void writeFunc (FILE *to, void *data)){
+
+
+	DL_ELEM *elem;
+	void			*data;
+
+	ASSERTARGS (list && writeFunc);
+
+	if (DL_SIZE(list) < 1)
+
+		return;
+
+	elem = DL_HEAD(list);
+	while (elem) {
+
+		data = DL_DATA(elem);
+		writeFunc (toFile, data);
+
+		elem = DL_NEXT(elem);
+
+	}
+
+	return;
+
+} // END printXrdsFP_DL()

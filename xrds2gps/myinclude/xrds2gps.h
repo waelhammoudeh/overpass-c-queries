@@ -5,13 +5,26 @@
 #include <stdlib.h>
 #include "fileio.h" // this includes dList.h on top
 #include "overpass-c.h"
+#include "ztError.h"
 
 // functions prototype
+void shortUsage (FILE *toFP, ztExitCodeType exitCode);
+
+void printHelp(FILE *toStream);
+
+int mkOutputFile (char **dest, char *givenName, char *rootDir);
+
+int curlGetXrdsDL (DL_LIST *xrdsDL, BBOX *bbox, char *server);
+
 int getXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
 
-int curlGetXrdsDL(DL_LIST *xrdsDL, BBOX *bbox, char *server, char *outDir);
+//int writeXrdsDL_WKT (DL_LIST *xrdsDL, char *toDir);
 
-int writeXrdsDL_WKT (DL_LIST *xrdsDL, char *toDir);
+//void printXrdsFP_DL (FILE *toF, DL_LIST *xrdsDL);
+
+FILE* openOutputFile (char *filename);
+
+int xrds2WKT_DL (DL_LIST *dstDL, DL_LIST *srcDL);
 
 /* it is a mistake to tag a slash at the end of the path */
 #define	SERVICE_URL		"http://localhost/api/interpreter"
@@ -23,13 +36,8 @@ int writeXrdsDL_WKT (DL_LIST *xrdsDL, char *toDir);
 
 #define	NUM_TRIES	3
 
-// DEBUG_QUERY define or undefine to save raw data from curl query to disk
-#define DEBUG_QUERY
-// #undef DEBUG_QUERY
-
 // exported globals
 extern const char *prog_name;
-extern FILE	*rawDataFP;
 
 
 #endif /*  XRDS2GPS_H_ */

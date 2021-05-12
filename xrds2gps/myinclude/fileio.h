@@ -29,4 +29,7 @@ int liList2File(char *dstFile, DL_LIST *list);
 
 int strList2File(char *dstFile, DL_LIST *list);
 
+void writeDL (FILE *toFile, DL_LIST *list,
+		                void writeFunc (FILE *to, void *data));
+
 #endif /* SOURCE_FILEIO_H_ */
