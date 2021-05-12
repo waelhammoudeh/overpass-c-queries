@@ -181,7 +181,14 @@ int removeDL (DL_LIST *list, DL_ELEM *element, void **data) {
 
 	}
 
+/** we should be able to free this! but I get:
+	corrupted size vs. prev_size
+	Aborted
+
+	current GCC v. 10.2.0 & glibc-2.32 FIXME
+
 	free(element); //we allocated memory for it when inserting
+**/
 
 	list->size--;
 
