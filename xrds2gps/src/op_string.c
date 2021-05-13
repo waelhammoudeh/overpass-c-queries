@@ -597,12 +597,12 @@ char *gps2WKT (GPS_PT *gps){
 /* return array of strings formated as WKT for given xrds */
 int xrds2WKT (char **dst, XROADS *xrds){
 
-	char		*emptyP = "\"POINT EMPTY\"";
+//	char		*emptyP = "\"POINT EMPTY\"";
 	int		iCount;
 
 	ASSERTARGS (dst && xrds);
 
-	if (xrds->nodesFound == 0){
+/*	if (xrds->nodesFound == 0){
 
 		*dst = strdup (emptyP);
 
@@ -610,6 +610,7 @@ int xrds2WKT (char **dst, XROADS *xrds){
 		*dst = NULL;
 		return ztSuccess;
 	}
+*/
 
 	iCount = 0;
 	while (xrds->nodesGPS[iCount]){
