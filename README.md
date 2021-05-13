@@ -62,8 +62,8 @@ An Example:
  
  Modified xrds2gps program; getopt_long() is used to parse command line arguments.
  Edited help page.
- Save raw data is an option to the program now.
- Well Known Text formated output is a new option.
+  * New: Save raw data to disk option.
+  * New: Write WKT (Well Known Text) formated output option.
 
 Questions are welcome, send me am email or a tweet ...
 
