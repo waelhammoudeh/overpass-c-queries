@@ -8,7 +8,7 @@ https://github.com/waelhammoudeh/overpass-4-slackware
 So please do not over use the public overpass server(s). Please setup your own
 server and use that with no limits, thank you in advance.
 
-A query to Overpass server can be sent throught script or program, I use c 
+A query to Overpass server can be sent through script or program, I use c 
 programming, hence, this repository also illustrates c programming.
 
 Organization:
@@ -55,7 +55,7 @@ Last; nothing is perfect and everything can be improved.
 An Example:
  
  The "xrds2gps" directory contains an example program with a makefile to build.
- Note that the input file and data I use is for Phoenix, Arizona.
+ Note that the input file and data I use are for Phoenix, Arizona.
  I should mention the quick call to getStreetNames() in that example was just
  that quick lazy call. That query is simple for a reason, and it is worthy of
  its own example and documentation ... that is first in my TODO list.
@@ -63,7 +63,24 @@ An Example:
  Modified xrds2gps program; getopt_long() is used to parse command line arguments.
  Edited help page.
   * New: Save raw data to disk option.
-  * New: Write WKT (Well Known Text) formated output option.
+  * New: Write WKT (Well Known Text) formatted output option.
+
+Well Known Text (WKT) formatted file can be used to visualize cross roads results
+from Overpass query. It can be used with QGIS - maybe others - to draw points on
+an Open Street Map window by adding a layer to the map using this WKT file.
+QGIS is available for Linux, for Slackware a build script is available on:
+www.slackbuilds.org.
+
+With QGIS installed, from the top menu select:
+    * Layer --> Add layer --> Add Delimited Text Layer ...
+and then from the dialog box choose your file - it helps to name your file with
+".csv" extension. In the file name field provide your file name or you may browse
+to it. Once file is selected, the "Add" button on the lower right will be enabled
+and you should be able to push to add the layer. There are a lot of options in 
+that dialog, defaults should do just fine. Make your layer the top layer over open
+street map.
+Maybe somebody can add a howto for this!
+
 
 Questions are welcome, send me am email or a tweet ...
 
