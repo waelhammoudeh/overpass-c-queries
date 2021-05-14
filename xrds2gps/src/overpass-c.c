@@ -9,16 +9,15 @@
 #include <stdlib.h>
 
 #include "overpass-c.h"
-#include "xrds2gps.h"
 #include "util.h"
 #include "ztError.h"
 #include "curl_func.h"
 #include "op_string.h"
 #include "dList.h"
 
-/* user can declare as global variable, and open a file - received data will
+/* Note: with (extern FILE *rawDataFP;) declaration in overpass.h
+ * user can declare as global variable, and open a file - received data will
  * be written to that file. Declaration is in the overpass.h header file with:
- * extern FILE *rawDataFP;
  * and code in in curlGetXrdsGPS() function below. ***/
 
  /* getXrdsGPS(): Function retrieves the GPS for the FIRST common node - if
@@ -206,13 +205,12 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 		return result;
 	}
 
-/* client can define DEBUG_QUERY somewhere before calling us AND open a text
+/* client can declare a global variable "rawDataFP" then open
  * file for writing with "rawDataFP" as the file pointer,
- * the recieved data will be written to that file.
- * This needs another visit ... I am spending way too much time on this
+ * the received data will be written to that file.
  ******************************************************************************/
 
-	/* write received data to raw data file if rawDataFP is set */
+	/* write received data to client opened file if rawDataFP is set */
 	if (rawDataFP){
 
 		fprintf (rawDataFP, "Data for cross roads: [ %s && %s ]\n\n",

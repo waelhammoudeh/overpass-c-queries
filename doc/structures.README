@@ -1,21 +1,62 @@
 This is to documenet the c structures used in the the overpass-c functions.
-Important structures used, not all.
+Important structures used, not all. I use typedef, so structures can be easly
+defined and declared. Below you find structure name : header file
 
 DL_LIST : dList.h
 Double linked list.
+
+typedef struct DL_ELEM_ {
+
+    void             *data;
+    struct DL_ELEM_  *next;
+    struct DL_ELEM_  *prev;
+
+} DL_ELEM;
+
+typedef struct DL_LIST_ {
+
+    int         size;
+    void        (*destroy) (void **data); // data is pointer to pointer
+    int         (*compare ) (const char *str1, const char *str2);
+    DL_ELEM     *head;
+    DL_ELEM     *tail;
+
+} DL_LIST;
+
 Main member is DL_ELEM with a pointer to data; the pointer can be to ANY data
 type - char string pointer, LINE_INFO pointer. User is responsible to maintain
 this pointer, do NOT lose it, AND do not mix pointers.
 
+
 POINT : overpass-c.h
+
+typedef struct POINT_ {
+
+    double  longitude, latitude;
+    int     ns, ew;
+    
+} POINT;
+
 A point structure with four members, longitude, latitude for GPS identification.
 Also two integers named ew and ns; for hundred block numbers, not used yet!
-City or county addresses are made of those, 
+City or county addresses are made out of those numbers.
+
 
 BBOX : overpass-c.h
+
+typedef struct BBOX_ {
+
+    POINT   sw, ne;
+    
+} BBOX;
+
 The bounding box, defined by 2 points, sw (south-west) and ne (north-east).
 
 XROADS : overpass-c.h
+
+
+
+
 Cross roads structure. Intersection of 2 streets / roads.
 
 DIMENSION : overpass-c.h
