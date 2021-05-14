@@ -73,6 +73,7 @@ www.slackbuilds.org.
 
 With QGIS installed, from the top menu select:
   * Layer --> Add layer --> Add Delimited Text Layer ...
+  * 
 and then from the dialog box choose your file - it helps to name your file with
 ".csv" extension. In the file name field provide your file name or you may browse
 to it. Once file is selected, the "Add" button on the lower right will be enabled
