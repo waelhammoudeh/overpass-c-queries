@@ -80,6 +80,8 @@ int main(int argc, char* const argv[]) {
 	FILE		*outputFilePtr = NULL;
 	FILE		*wktFilePtr = NULL;
 
+	char		wktFileNameCSV[PATH_MAX] = {0};
+
 	/* set prog_name .. lastOfPath() might get called with a path */
 	prog_name = lastOfPath (argv[0]);
 
@@ -165,7 +167,8 @@ int main(int argc, char* const argv[]) {
 				return ztBadFileName;
 			}
 
-			// make WKT file name
+			// make WKT file name.
+			/* Note we add '.csv' extension to file name before we open it below */
 			mkOutputFile (&wktFileName, optarg, progDir);
 
 			break;
@@ -287,7 +290,18 @@ int main(int argc, char* const argv[]) {
 
 	if (wktFileName){
 
-		wktFilePtr = openOutputFile (wktFileName);
+		/* csv (comma separated variables) extension to output file name ONLY
+		 * when file name has no extension  */
+		//char		wktFileNameCSV[PATH_MAX] = {0};
+
+		if (strrchr(wktFileName, '.'))
+			strcpy (wktFileNameCSV, wktFileName);
+		else {
+			sprintf (wktFileNameCSV, "%s.csv", wktFileName);
+			fprintf (stdout, "%s: saving WKT output to file: %s\n", prog_name, wktFileNameCSV);
+		}
+
+		wktFilePtr = openOutputFile (wktFileNameCSV);
 		if ( ! wktFilePtr) {
 			fprintf (stderr, "%s: Error opening WKT output file: <%s>\n",
 			             prog_name, wktFileName);
@@ -436,7 +450,7 @@ int main(int argc, char* const argv[]) {
 
 	if (wktFilePtr) {
 
-		fprintf (stdout, "Wrote Well Known Text to file: %s\n", wktFileName);
+		fprintf (stdout, "Wrote Well Known Text to file: %s\n", wktFileNameCSV);
 		fclose (wktFilePtr);
 	}
 
