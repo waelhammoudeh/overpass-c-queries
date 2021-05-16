@@ -13,7 +13,7 @@
 #include "ztError.h"
 #include "curl_func.h"
 #include "op_string.h"
-#include "dList.h"
+#include "fileio.h"
 
 /* Note: with (extern FILE *rawDataFP;) declaration in overpass.h
  * user can declare as global variable, and open a file - received data will
@@ -135,12 +135,20 @@ char *xrdsFillTemplate (XROADS *xrds, BBOX *bbox){
 
 	char			tmpBuf[LONG_LINE * 2] = {0}; // large buffer
 	char			*retValue = NULL;
+	char			*cleanFirstRD, *cleanSecondRD;
 	int			result;
 
 	ASSERTARGS (xrds && bbox);
 
 	// the two roads members should be set in the struct
 	ASSERTARGS(xrds->firstRD && xrds->secondRD);
+
+	// remove leading and trailing white space
+	cleanFirstRD = strdup (xrds->firstRD);
+	cleanSecondRD = strdup (xrds->secondRD);
+
+	removeSpaces (&cleanFirstRD);
+	removeSpaces (&cleanSecondRD);
 
 	if ( ! isBbox(bbox)){
 
@@ -159,7 +167,7 @@ char *xrdsFillTemplate (XROADS *xrds, BBOX *bbox){
 	result = (int) snprintf (tmpBuf, (LONG_LINE * 2), queryTemplate,
 					                      bbox->sw.latitude,bbox->sw.longitude,
 										  bbox->ne.latitude, bbox->ne.longitude,
-										  xrds->firstRD, xrds->secondRD);
+										  cleanFirstRD, cleanSecondRD);
 
 	if (result > (LONG_LINE * 2) ){
 
@@ -221,6 +229,7 @@ int curlGetXrdsGPS(XROADS *xrds, BBOX *bbox, char *server,
 		fflush (rawDataFP);
 
 	}
+
 
 	/* the above function call and a successful result test ONLY tell us that
 	 * we received some response from the server. Is it what we want? Or
