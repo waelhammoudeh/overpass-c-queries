@@ -1,0 +1,65 @@
+# one big bounding box in Phoenix
+# Central Ave. to Scottsdale Rd and 
+# Harrison St / Train Tracks to Beardsley Rd
+# 33.4433, -112.0751, 33.67001, -111.925
+
+# this bbox below is to 20th Street :: smaller box -> smaller process time
+33.4433, -112.0751, 33.67001, -112.039034
+
+North Central Avenue, East Washington Street
+North Central Avenue, East Van Buren Street
+North Central Avenue, East McDowell Road
+North Central Avenue, East Thomas Road
+North Central Avenue, East Indian School Road
+North Central Avenue, East Camelback Road
+North Central Avenue, East Bethany Home Road
+North Central Avenue, East Glendale Avenue
+North Central Avenue, East Northern Avenue
+North Central Avenue, East Dunlap Avenue
+North Central Avenue, East Peoria Avenue
+North Central Avenue, East Catcus Road
+North Central Avenue, East Thunderbird Road
+North Central Avenue, East Greenway Road
+North Central Avenue, East Bell Road
+North Central Avenue, East Union Hills Drive
+North Central Avenue, East Beardsley Road
+
+; wrong info in OSM data! nodes north of Washington St. should be labeled "North"
+North 7Th Street, East Washington Street
+South 7Th Street, East Washington Street
+North 7Th Street, East Van Buren Street
+North 7Th Street, East McDowell Road
+North 7Th Street, East Thomas Road
+North 7Th Street, East Indian School Road
+North 7Th Street, East Camelback Road
+North 7Th Street, East Bethany Home Road
+North 7Th Street, East Glendale Avenue
+North 7Th Street, East Northern Avenue
+North 7Th Street, East Dunlap Avenue
+North 7Th Street, East Peoria Avenue
+North 7Th Street, East Catcus Road
+North 7Th Street, East Thunderbird Road
+North 7Th Street, East Greenway Road
+North 7Th Street, East Greenway Parkway
+North 7Th Street, East Bell Road
+North 7Th Street, East Union Hills Drive
+North 7Th Street, East Beardsley Road
+
+North 16Th Street, East Washington Street
+North 16Th Street, East Van Buren Street
+North 16Th Street, East McDowell Road
+North 16Th Street, East Thomas Road
+North 16Th Street, East Indian School Road
+North 16Th Street, East Camelback Road
+North 16Th Street, East Bethany Home Road
+North 16Th Street, East Glendale Avenue
+North 16Th Street, East Northern Avenue
+North 16Th Street, East Dunlap Avenue
+North 16Th Street, East Peoria Avenue
+North 16Th Street, East Catcus Road
+North 16Th Street, East Thunderbird Road
+# North 16Th Street, East Greenway Road
+North 16Th Street, East Greenway Parkway
+North 16Th Street, East Bell Road
+North 16Th Street, East Union Hills Drive
+North 16Th Street, East Beardsley Road

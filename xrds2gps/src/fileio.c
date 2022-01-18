@@ -264,9 +264,8 @@ int strList2File(char *dstFile, DL_LIST *list){
 	return ztSuccess;
 }
 
-/* toFile: file pointer to an open file, can be NULL. writeFunc() writes specific
- * data type of data
- */
+/* toFile: file pointer to an open file, can be NULL -> standard output is used
+ * writeFunc() writes specific data type.  */
 void writeDL (FILE *toFile, DL_LIST *list, void writeFunc (FILE *to, void *data)){
 
 
@@ -282,7 +281,7 @@ void writeDL (FILE *toFile, DL_LIST *list, void writeFunc (FILE *to, void *data)
 	elem = DL_HEAD(list);
 	while (elem) {
 
-		data = DL_DATA(elem);
+		data = (void *) DL_DATA(elem);
 		writeFunc (toFile, data);
 
 		elem = DL_NEXT(elem);
@@ -291,4 +290,4 @@ void writeDL (FILE *toFile, DL_LIST *list, void writeFunc (FILE *to, void *data)
 
 	return;
 
-} // END printXrdsFP_DL()
+} // END writeDL()

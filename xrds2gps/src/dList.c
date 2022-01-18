@@ -187,8 +187,12 @@ int removeDL (DL_LIST *list, DL_ELEM *element, void **data) {
 
 	current GCC v. 10.2.0 & glibc-2.32 FIXME
 
-	free(element); //we allocated memory for it when inserting
+	free(element);
+	we allocated memory for it when inserting --
+	ADDED back call to free on 1/17/2022 w.h seems okay now!?
 **/
+
+	free(element);
 
 	list->size--;
 
@@ -198,23 +202,17 @@ int removeDL (DL_LIST *list, DL_ELEM *element, void **data) {
 
 void destroyDL (DL_LIST *list) {
 
-	DL_ELEM *elem;
-	void	*data;
+	void			*data;
 
 	ASSERTARGS (list);
 
-	/* remove each element */
 	while (list->size > 0){
 
-		elem = DL_TAIL (list);
-
-		removeDL (list, elem, &data);
-
-		if (list->destroy != NULL)
-
-			list->destroy (&data);
-
-	}  /* End while(list->size > 0)  */
+		if (removeDL (list, DL_TAIL(list),  (void **) &data) == ztSuccess && list->destroy ){
+			if (data)
+				list->destroy ((void**) &data);
+		}
+	}
 
 	memset (list, 0, sizeof(DL_LIST));
 

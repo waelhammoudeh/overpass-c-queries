@@ -1,6 +1,14 @@
 This is to documenet the c structures used in the the overpass-c functions.
 Important structures used, not all. I use typedef, so structures can be easly
-defined and declared. Below you find structure name : header file
+defined and declared.
+Below you will find structure name listed by header file in which they were
+declared.
+Changes: Structures in overpass-c.h have changed. Listed here are the current
+structures.
+
+I no longer show or include "wget" usage in xrds2gps example program. I use
+all libcurl calls in the program, there is a minimum version requirement for this
+library which is defined in "curl_func.h" header file as: 7.80.0 version.
 
 DL_LIST : dList.h
 Double linked list.
@@ -27,45 +35,45 @@ Main member is DL_ELEM with a pointer to data; the pointer can be to ANY data
 type - char string pointer, LINE_INFO pointer. User is responsible to maintain
 this pointer, do NOT lose it, AND do not mix pointers.
 
+overpass-c.h file defined structures:
 
-POINT : overpass-c.h
+typedef struct GPS_ {
+
+    double 	longitude,
+                    latitude;
+} GPS;
+
+typedef struct HB_ { // hundred block number
+
+    int	ns, ew;
+
+} HB;
+
+// limit name length in POINT
+#define POINT_NAME_LENGTH 48
 
 typedef struct POINT_ {
 
-    double  longitude, latitude;
-    int     ns, ew;
-    
+    GPS     gps;
+    HB       hb;
+    char    name[POINT_NAME_LENGTH];
 } POINT;
-
-A point structure with four members, longitude, latitude for GPS identification.
-Also two integers named ew and ns; for hundred block numbers, not used yet!
-City or county addresses are made out of those numbers.
-
-
-BBOX : overpass-c.h
 
 typedef struct BBOX_ {
 
     POINT   sw, ne;
-    
 } BBOX;
 
-The bounding box, defined by 2 points, sw (south-west) and ne (north-east).
+/* limit number of GPS nodes we store */
+#define MAX_NODES 8
 
-XROADS : overpass-c.h
+typedef struct XROADS_ {
+
+    char    *firstRD, *secondRD;
+    POINT  point;
+    int		nodesNum;
+    GPS     *nodesGPS[MAX_NODES];
+
+} XROADS;
 
 
-
-
-Cross roads structure. Intersection of 2 streets / roads.
-
-DIMENSION : overpass-c.h
-Two integers; row and column for 2 dimensional array.
-
-XRDS_MTRX : overpass-c.h
-Cross roads matrix or array, with DIMENSION member and a pointer to pointer to
-XROADS structures or the 2 dimensional array itself.
-
-RECT_MTRX : overpass-c.h
-A 2 dimensional array of RECTANGLES; 
-just like XRDS_MTRX above but for RECTANGLES.

@@ -7,20 +7,28 @@
 #include "ztError.h"
 
 // global variables
-static	CURL 	*curl_handle;
-static 	int		sessionFlag = 0;
-static	int 		afterPostFlag = 0; // this is ugly! But maybe I am catering for stupid.
+static  int     sessionFlag = 0; // global initial flag
 
-/* curlInitialSession() : initials curl session, must call this function before
- * using any other function, call curlCloseSession() to end the session ****/
-
-int curlInitialSession(void){
+/* initialSession(): checks libcurl version and calls curl_global_init()
+ * then sets sessionFlag. Call this function first to use any other
+ * functions here or libcurl functions. Call closeSession() when done.
+ * MIN_CURL_VER is defined in curl_func.h header file.
+****************************************************************************/
+int initialSession(void){
 
 	CURLcode	result;
+	curl_version_info_data *verInfo; /* script or auto tools maybe?? ****/
 
-	if (sessionFlag)
+	if (sessionFlag) // call me only once
 
-		return 0;
+		return ztSuccess;
+
+	verInfo = curl_version_info(CURLVERSION_NOW);
+	if (verInfo->version_num < MIN_CURL_VER){
+
+		fprintf (stderr, "ERROR: Required \"libcurl\" minimum version is: 7.80.0. Aborting.\n");
+		return ztInvalidUsage;
+	}
 
 	result = curl_global_init(CURL_GLOBAL_ALL);
 	if (result != 0){
@@ -30,26 +38,18 @@ int curlInitialSession(void){
 
 	}
 
-	/* init the curl session */
-	curl_handle = curl_easy_init();
-	if (curl_handle == NULL){
-		fprintf(stderr, "curlInitialSession(): Error curl_easy_init() failed. got NULL handle!\n\n");
-		return ztGotNull;
-	}
-
 	sessionFlag = 1;
 
-	return result;
+	return ztSuccess;
 }
 
-void curlCloseSession(void){
+void closeSession(void){
 
 	if (sessionFlag == 0)
 
 		return;
 
-	/* cleanup curl stuff */
-	curl_easy_cleanup(curl_handle);
+	/* REMOVED: curl_easy_cleanup() is done per handle 12/19/2021 */
 
 	/* we're done with libcurl, so clean it up */
 	curl_global_cleanup();
@@ -59,8 +59,10 @@ void curlCloseSession(void){
 	return;
 }
 
+/* WriteMemoryCallback(): call back function copied from curl source examples.
+ **************************************************************************** */
 static size_t WriteMemoryCallback (void *contents, size_t size,
-															   size_t nmemb, void *userp) {
+                                            size_t nmemb, void *userp) {
 
   size_t realsize = size * nmemb;
   MEMORY_STRUCT *mem = (MEMORY_STRUCT *) userp;
@@ -68,7 +70,7 @@ static size_t WriteMemoryCallback (void *contents, size_t size,
   char *ptr = realloc(mem->memory, mem->size + realsize + 1);
   if(ptr == NULL) {
     /* out of memory! */
-    printf("WriteMemoryCallback(): Error not enough memory "
+    fprintf(stderr, "WriteMemoryCallback(): Error not enough memory "
     		"(realloc returned NULL)\n");
     return 0;
   }
@@ -81,172 +83,172 @@ static size_t WriteMemoryCallback (void *contents, size_t size,
   return realsize;
 }
 
-
-/*** to use curlMemoryDownload() function, you must call curlInitialSession() FIRST.
- *    call curlCloseSession() when done. I have not tested mixing methods.
- *    Para: dst is a pointer to MemoryStrut allocated by the client / caller. Function
- *    allocates memory for memory member, downloaded data is copied there, function
- *    also sets size to the downloaded data byte count.
- *    urlPath: pointer to string including protocol plus the path to remote server; example:
- *      http://localhost/api/interpreter
- *    whichData: character pointer specifying the remote resource - file or script.
- *    method: enumerated number for HTTP method {Get or Post}.
- *    Return: ztSuccess, Numbers of error codes .....
- *    Caller on successful return should copy the data right away.
+/* initialURL(): calls curl_url() and sets server url to let libcurl do URL
+ * parsing for us. Parameter server maybe NULL, should be at least scheme
+ * and server name. Caller must call urlCleanup(retValue) when done.
  */
+CURLU * initialURL (char *server){
 
-int curlMemoryDownload(MEMORY_STRUCT *dst, char *urlPath,
-		                                char *whichData, HTTP_METHOD method) {
+	CURLU *retValue = NULL;
+	CURLUcode result;
 
-  CURLcode 	res;
-  char			*srvrPath;
-  char 			*query;
-  char			getBuf[LONG_LINE] = {0};
-  char 			*curlEscaped = NULL;
 
-  if (sessionFlag == 0){
-	  fprintf(stderr, "curlMemoryDownload(): Error, session not initialized. You must call\n "
-			     " curlInitialSession() first and check its return value.\n");
-	  return ztInvalidUsage;
-  }
+	retValue = curl_url();
 
-  if (curl_handle == NULL){
-	  fprintf(stderr, "curlMemoryDownload(): Error, curl_handle is NULL. "
-			  "Maybe you should abort()!\n");
-	  return ztUnknownError;
-  }
+	if (retValue == NULL)
 
-  ASSERTARGS (dst && urlPath && whichData);
+		return retValue;
 
-  /** USER SHOULD LIMIT SESSION TO ONE METHOD ONLY - DON'T MIX **/
-  if ((method != Get) && (method != Post)) {
-	  printf ("curlMemoryDownload(): Error unsupported method specified. \n"
-			       "  supported methods are Get or Post.\n\n");
-	  return ztInvalidArg;
+	if (server){
+	/* caller should check connection first. checkURL() in network.c file */
 
-  }
+		result = curl_url_set(retValue, CURLUPART_URL, server, 0);
+		if (result != CURLUE_OK){
+			curl_url_cleanup(retValue);
+			retValue = NULL;
+			fprintf(stderr, "curl_url_set() failed: %s\n",
+			            curl_url_strerror(result));
+		}
+	}
 
-  dst->memory = malloc(1);
-  dst->size = 0;
+	return retValue;
+}
 
-  srvrPath = urlPath;
-  query = whichData;
+/* initialQuery(): gets curl easy handle using curl URL parse handle.
+ * Sets basic (common) query options.
+ ***************************************************************** */
+CURL * initialQuery (CURLU *serverUrl){  // curl parser url CURLU
 
-  /* start common CURLOPTs *******/
+	CURL			*qryHandle = NULL;
+	CURLcode 	res;
 
-  res = curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-  if(res != CURLE_OK) {
-	  fprintf(stderr, "curl_easy_setopt() failed to set WRITEFUNCTION "
-   				  "{CURLOPT_WRITEFUNCTION}: %s\n", curl_easy_strerror(res));
-	  return res;
-  }
+	if (sessionFlag == 0){
+		fprintf(stderr, "initialQuery(): Error, session not initialized. You must call\n "
+				     " initialSession() first and check its return value.\n");
+		return qryHandle;
+	}
 
-  res = curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)dst);
-  if(res != CURLE_OK) {
-	  fprintf(stderr, "curl_easy_setopt() failed to set WRITEDATA "
-   				  "{CURLOPT_WRITEDATA}: %s\n", curl_easy_strerror(res));
-	  return res;
-  }
+	ASSERTARGS (serverUrl);
 
-  res = curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-  if(res != CURLE_OK) {
-	  fprintf(stderr, "curl_easy_setopt() failed to set USERAGENT "
-   				  "{CURLOPT_USERAGENT}: %s\n", curl_easy_strerror(res));
-	  return res;
-  }
+	qryHandle = easyInitial();
+	if ( ! qryHandle){
+		fprintf(stderr, "initialQuery(): curl_easy_init() call failed. Client:: Abort?!\n");
+		return qryHandle;
+	}
 
-  //curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);  // FIXME do not leave here
+	res = queryBasicOptions (qryHandle, serverUrl);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "initialQuery(): Error returned from queryBasicOptions().\n");
+		easyCleanup(qryHandle);
+		qryHandle = NULL;
+		return qryHandle;
+	}
 
-  // start Get method
-  if (method == Get){
+	return qryHandle;
 
-	  if (afterPostFlag){
+}
 
-		  res = curl_easy_setopt (curl_handle, CURLOPT_HTTPGET, 1L);
-		  if(res != CURLE_OK) {
-			  fprintf(stderr, "curl_easy_setopt() failed to set HTTPGET "
-		   				  "{CURLOPT_HTTPGET}: %s\n", curl_easy_strerror(res));
-			  return res;
-		  }
+/* queryBasicOptions(): sets query basic options
+************************************************************************** */
+CURLcode queryBasicOptions (CURL *qH, CURLU *serverUrl){
 
-		  afterPostFlag = 0;
+	CURLcode res;
 
-	  }
-	  /* I escape  (encode) the query part ONLY ... this may not be correct! */
-	  curlEscaped = curl_easy_escape(curl_handle, query, strlen(query));
-	  if ( curlEscaped == NULL ){
-		  printf("curlMemoryDownload(): Error returned by curl_easy_esacpe(). It is NULL!!!\n");
-		  return ztGotNull;
-	  }
+	ASSERTARGS (qH && serverUrl);
 
-	  sprintf(getBuf, "%s?data=%s", srvrPath, curlEscaped);
+	res = curl_easy_setopt(qH, CURLOPT_CURLU, serverUrl);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set URL to srvrPath "
+				  "{CURLOPT_CURLU}: %s\n", curl_easy_strerror(res));
+		return res;
+	}
 
-	  // turn on TRANSFER_ENCODING
-	  res = curl_easy_setopt (curl_handle, CURLOPT_TRANSFER_ENCODING, 1L);
-	  if(res != CURLE_OK) {
-		  fprintf(stderr, "curl_easy_setopt() failed to set TRANSFER_ENCODING"
+	res = curl_easy_setopt(qH, CURLOPT_USERAGENT, "curl/7.80.0");
+	if(res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set USERAGENT "
+	   				"{CURLOPT_USERAGENT}: %s\n", curl_easy_strerror(res));
+		return res;
+	}
+
+	res = curl_easy_setopt (qH, CURLOPT_TCP_KEEPALIVE, 1L);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set KEEPALIVE connection"
+				  "{CURLOPT_TCP_KEEPALIVE}: %s\n", curl_easy_strerror(res));
+		return res;
+	}
+
+	/* turn on TRANSFER_ENCODING */
+	res = curl_easy_setopt (qH, CURLOPT_TRANSFER_ENCODING, 1L);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set TRANSFER_ENCODING"
 	   				  "{CURLOPT_TRANSFER_ENCODING}: %s\n", curl_easy_strerror(res));
-		  return res;
-	  }
+		return res;
+	}
 
-	  res = curl_easy_setopt(curl_handle, CURLOPT_URL, getBuf);
-	  if(res != CURLE_OK) {
-		  fprintf(stderr, "curl_easy_setopt() failed to set URL "
-	   				  "{CURLOPT_URL getBuf}: %s\n", curl_easy_strerror(res));
-		  return res;
-	  }
+	// tell it to use POST http method -- third parameter set to one
+	res = curl_easy_setopt(qH, CURLOPT_POST, 1L);
+	if (res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set POST method "
+				"{CURLOPT_POST}: %s\n", curl_easy_strerror(res));
+		return res;
+	}
 
-  } // end if Get
+	res = curl_easy_setopt(qH, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	if(res != CURLE_OK) {
+		fprintf(stderr, "queryBasicOptions() failed to set WRITEFUNCTION "
+	   				  "{CURLOPT_WRITEFUNCTION}: %s\n", curl_easy_strerror(res));
+		return res;
+	}
 
-  if (method == Post){
+	return ztSuccess;
 
- 	  afterPostFlag = 1;
+}
 
- 	  // tell it to use POST http method -- third parameter set to one
- 	  res = curl_easy_setopt (curl_handle, CURLOPT_POST, 1L);
- 	  if(res != CURLE_OK) {
- 		  fprintf(stderr, "curl_easy_setopt() failed to set POST method "
- 				  "{CURLOPT_POST}: %s\n", curl_easy_strerror(res));
- 		  return res;
- 	  }
+/* performQuery(): executes query on the srvrURL, writes results in memory
+ * defined in answer pointer.
+ *****************************************************************************/
 
- 	  // what to POST -- third parameter is the pointer to our query string
- 	  res = curl_easy_setopt (curl_handle, CURLOPT_POSTFIELDS, query);
- 	  if(res != CURLE_OK) {
- 		  fprintf(stderr, "curl_easy_setopt() failed to set POSTFIELD "
- 				  "{CURLOPT_POSTFIELDS}: %s\n", curl_easy_strerror(res));
+int performQuery (MEMORY_STRUCT *answer, char *query, CURLU *srvrURL, CURL *qh){
 
- 		  return res;
- 	  }
+	CURLcode	result;
 
- 	  res = curl_easy_setopt(curl_handle, CURLOPT_URL, srvrPath);
- 	  if(res != CURLE_OK) {
- 		  fprintf(stderr, "curl_easy_setopt() failed to set URL to srvrPath "
- 				  "{CURLOPT_URL}: %s\n", curl_easy_strerror(res));
+	ASSERTARGS (answer && query && srvrURL && qh);
 
- 		  return res;
- 	  }
-   } // end if Post
+	answer->memory = malloc(1); /* should check return, lazy ass! */
+	answer->size = 0;
 
-  /* get it! */
-  res = curl_easy_perform(curl_handle);
+	result = curl_easy_setopt(qh, CURLOPT_WRITEDATA, (void *)answer);
+	if(result != CURLE_OK) {
+		fprintf(stderr, "performQuery() failed to set WRITEDATA "
+	   				  "{CURLOPT_WRITEDATA}: %s\n", curl_easy_strerror(result));
+		return result;
+	}
 
-  /* check for errors */
-  if(res != CURLE_OK) {
-    fprintf(stderr, "curl_easy_perform() failed: %s\n",
-            curl_easy_strerror(res));
-  }
+	// what to POST -- third parameter is the pointer to our query string
+	result = curl_easy_setopt(qh, CURLOPT_POSTFIELDS, query);
+	if (result != CURLE_OK) {
+		fprintf(stderr, "performQuery() failed to set POSTFIELD "
+				"{CURLOPT_POSTFIELDS}: %s\n", curl_easy_strerror(result));
 
-  else {
+		return result;
+	}
 
-	  printf("curlMemoryDownload(): Done.  "
-			  	  "%lu bytes retrieved\n\n", (unsigned long) dst->size);
+	/* get it! */
+	result = curl_easy_perform(qh);
 
-  }
+	/* check for errors */
+	if (result != CURLE_OK) {
+		fprintf(stderr, "performQuery() failed call to curl_easy_perform!!: %s\n",
+				curl_easy_strerror(result));
+	}
 
-  if (curlEscaped)
-	  curl_free(curlEscaped);
+	else {
 
-  return ztSuccess;
+		printf("performQuery(): Done.  "
+				"%u bytes retrieved\n\n", (unsigned) answer->size);
+
+	}
+
+	return ztSuccess;
 
 }

@@ -9,7 +9,7 @@
 #define ZTERROR_H_
 
 /* return enumerated types codes */
-typedef enum {
+typedef enum{
 	ztSuccess,
 	ztMissingArgError,
 	ztSystemGetcwdError,
