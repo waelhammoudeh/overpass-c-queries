@@ -496,12 +496,13 @@ int myMkDir (char *name){
 	return ztSuccess;
 
 }   /* END MyMkDir()  */
+
 /* myFgets(): works like fgets() except it skips comments and blank lines
  * and increments lineNum.
  * comment line: first non-white character is <; or #>
  * TODO document function!
  ************************************************************************/
-char* myFgets(char* str, int count, FILE* fPtr, int* lineNum){
+char* myFgets(char *strDest, int count, FILE *fPtr, int *lineNum){
 
 	char		*whiteSpace = "\040\t\n\r";  /* white space is made of:
 																space, tab, line feed
@@ -509,6 +510,11 @@ char* myFgets(char* str, int count, FILE* fPtr, int* lineNum){
 	char 	SPACE = '\040';
 	char 	TAB   = '\t';
 	//char *rvalue;
+	char 	*str;
+
+	str = (char *) malloc(sizeof(char) * LONG_LINE);
+	memset (str, 0, LONG_LINE);
+
 
 	/* read one line at a time, if we fail, then file ends prematurely */
 	while(fgets(str, count, fPtr)) {
@@ -552,7 +558,9 @@ char* myFgets(char* str, int count, FILE* fPtr, int* lineNum){
 	}
 *****************************************************************/
 
-	return str;
+	strcpy (strDest, str);
+
+	return strDest;
 
 } // END myFgets()
 
@@ -874,19 +882,60 @@ int stringToUpper (char **dst, char *str){
 
 }  /* END stringToUpper() */
 
-
-/* getServerName(): extracts server name from a given URL string.
- * typical URL: http://www.server.org/path/to/resource.wtf
- * server name is the string between double slash and the first slash;
- * for the above the server name is: www.server.org
- * accepted input:
- * may not include protocol: www.server.org/path/to/resource.wtf
- * may not include resource path: http://www.server.org
- *
- *
- *
- *
- * this is a strictly string function.
+/* mkOutFile(): make output file name, sets dest to givenName if it has a slash,
+ * else it appends givenName to rootDir and then sets dest to appended string
  */
+int mkOutputFile (char **dest, char *givenName, char *rootDir){
 
+	char		slash = '/';
+	char		*hasSlash;
+	char		tempBuf[PATH_MAX] = {0};
 
+	ASSERTARGS (dest && givenName && rootDir);
+
+	hasSlash = strchr (givenName, slash);
+
+	if (hasSlash)
+
+		*dest = (char *) strdup (givenName); // strdup() can fail .. check it FIXME
+
+	else {
+
+		if(IsSlashEnding(rootDir))
+
+			snprintf (tempBuf, PATH_MAX -1 , "%s%s", rootDir, givenName);
+		else
+			snprintf (tempBuf, PATH_MAX - 1, "%s/%s", rootDir, givenName);
+
+		*dest = (char *) strdup (&(tempBuf[0]));
+
+	}
+
+	/* mystrdup() ::: check return value of strdup() TODO */
+
+	return ztSuccess;
+}
+
+/* openOutputFile(): opens filename for writing, filename includes path */
+
+FILE* openOutputFile (char *filename){
+
+	FILE		*fPtr = NULL;
+
+	ASSERTARGS (filename);
+
+	errno = 0; //set error number
+
+	//try to open the file for writing
+	fPtr = fopen(filename, "w");
+	if (fPtr == NULL){
+
+		fprintf (stderr, "openOutputFile(): Error opening file: <%s>\n", filename);
+		fprintf(stderr, "System error message: %s\n\n", strerror(errno));
+		//print reason with perror()
+		perror("The call to fopen() failed!");
+	}
+
+	return fPtr;
+
+} // END openOutputFile()

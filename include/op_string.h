@@ -23,16 +23,18 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL);
 
 int response2LineDL (DL_LIST *dstDL, char *response);
 
-int parseGPS (GPS_PT *dst, char *str);
+int parseGPS (GPS *dst, char *str);
 
 void printXrds (XROADS *xrds);
 
 void writeXrds (FILE *file, void *data);
 
-char *gps2WKT (GPS_PT *gps);
+char *gps2WKT (GPS *gps);
 
 int xrds2WKT (char **dst, XROADS *xrds);
 
 void writeString2FP (FILE *to, void *str);
+
+void printXrds(XROADS *xrds);
 
 #endif /* OP_STRING_H_ */

@@ -116,19 +116,19 @@ int parseBbox(BBOX *bbox, char *string){
 		switch (i){  /* assign */
 
 		case 0:
-			bbox->sw.latitude = numDbl;
+			bbox->sw.gps.latitude = numDbl;
 			break;
 
 		case 1:
-			bbox->sw.longitude = numDbl;
+			bbox->sw.gps.longitude = numDbl;
 			break;
 
 		case 2:
-			bbox->ne.latitude= numDbl;
+			bbox->ne.gps.latitude= numDbl;
 			break;
 
 		case 3:
-			bbox->ne.longitude = numDbl;
+			bbox->ne.gps.longitude = numDbl;
 			break;
 
 		default:
@@ -194,10 +194,10 @@ int xrdsParseNames(XROADS *dest, char *str){
 }
 
 
-int parseGPS (GPS_PT *dst, char *str){
+int parseGPS (GPS *dst, char *str){
 /* parse GPS point latitude and longitude members (overpass result line)
  * <	33.5605235		-112.0652852	> store result in dst members
- * dst is pointer to GPS_PT structure in parseGPS2()
+ * dst is pointer to GPS structure in parseGPS2()
  * was XROADS pointer in parseGPS() - earlier function */
 	char			*myStr;
 	char			*delim = "\040\t";
@@ -392,9 +392,6 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 
 	ASSERTARGS (dstXrds && srcDL);
 
-	// set first nodesGPS pointer to NULL; change below when nodes found
-	dstXrds->nodesGPS[0] = NULL;
-
 	// last line has the number of returned nodes found
 	elem = DL_TAIL(srcDL);
 	lineInfo = DL_DATA(elem);
@@ -403,26 +400,13 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 	sscanf(str, "%d", &numFound);
 
 	// set nodesFound member of the XROADS structure.
-	dstXrds->nodesFound = numFound;
+	dstXrds->nodesNum = numFound;
 
 	 if (numFound == 0) // Done; nothing left to do
 
 		 return ztSuccess;
 
-	 // found intersection(s), parse them all and stuff'em in GPS_PT array
-	 /* allocate pointers in the array for the numFound plus one, last will
-	  * be set to NULL.
-	  */
-
-	 for (iCount = 0; iCount < numFound; iCount++){
-
-		 dstXrds->nodesGPS[iCount] = (GPS_PT *)  malloc(sizeof(GPS_PT));
-		 if ( ! dstXrds->nodesGPS[iCount] ){
-			 printf ("parseXrdsResult(): Error allocating memory.\n");
-			 return ztMemoryAllocate;
-		 }
-	 }
-	 dstXrds->nodesGPS[numFound] = NULL;
+	 // found intersection(s), parse them all and stuff'em in GPS array
 
 	 /* we have enough allocated pointers, each line starting at second line
 	  * has a GPS point, point at the second line in the source list, fill 'em up */
@@ -445,8 +429,8 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 	 }
 
 	 // set XRDOADS point member to first GPS found
-	 dstXrds->point.longitude = dstXrds->nodesGPS[0]->longitude;
-	 dstXrds->point.latitude= dstXrds->nodesGPS[0]->latitude;
+	 dstXrds->point.gps.longitude = dstXrds->nodesGPS[0]->longitude;
+	 dstXrds->point.gps.latitude= dstXrds->nodesGPS[0]->latitude;
 
 	 return ztSuccess;
 }
@@ -514,13 +498,7 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 
 	xrds = (XROADS *) data;
 
-	if (xrds->nodesGPS[0]) // stays NULL with no node found
-
-		sprintf (pointBuf, "(%10.7f, %10.7f)",
-					xrds->nodesGPS[0]->longitude,
-					xrds->nodesGPS[0]->latitude);
-
-	else
+	if (xrds->nodesNum == 0)
 
 		sprintf (pointBuf, notFound);
 
@@ -531,8 +509,7 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 
 	fprintf (filePtr, "%s\n", buf);
 
-	iCount = 1;
-	while ((xrds->nodesGPS[0]) && xrds->nodesGPS[iCount]){
+	for (iCount = 0; iCount < xrds->nodesNum; iCount++){
 
 		sprintf (pointBuf, "(%10.7f, %10.7f)",
 				xrds->nodesGPS[iCount]->longitude,
@@ -540,13 +517,9 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 
 		fprintf (filePtr, "%80s\n", pointBuf);
 
-		iCount++;
 	}
 	//fprintf (filePtr, "-------------------------------------------------------------------------------\n");
 	fprintf (filePtr, " ...............................................................................\n");
-	//sprintf (buf, "%80s\n", separater);
-	//fprintf (filePtr, buf);
-	//fprintf (filePtr, "\n");
 
 
 	return;
@@ -574,7 +547,7 @@ void writeString2FP (FILE *to, void *str){
 
 /* formats GPS as Well Known Text POINT: "POINT ((-111.917714 33.407882))"
  * function allocates memory for buffer, no line feed is used. */
-char *gps2WKT (GPS_PT *gps){
+char *gps2WKT (GPS *gps){
 
 	char		*retPtr = NULL;
 	int		bufSize = 36;
@@ -602,27 +575,34 @@ int xrds2WKT (char **dst, XROADS *xrds){
 
 	ASSERTARGS (dst && xrds);
 
-/*	if (xrds->nodesFound == 0){
-
-		*dst = strdup (emptyP);
-
-		dst++;
-		*dst = NULL;
-		return ztSuccess;
-	}
-*/
-
-	iCount = 0;
-	while (xrds->nodesGPS[iCount]){
+	for (iCount = 0; iCount < xrds->nodesNum; iCount++){
 
 		*dst = gps2WKT (xrds->nodesGPS[iCount]);
 		if ( *dst == NULL)
 			return ztMemoryAllocate;
 
 		dst++;
-		iCount++;
 	}
 	*dst = NULL;
 
 	return ztSuccess;
+}
+
+/* printXrds(): write XROADS structure to terminal. Not all members are handled */
+void printXrds(XROADS *xrds){
+
+	ASSERTARGS(xrds);
+
+	printf("printXrds(): cross roads members:\n");
+	printf("\t firstRd: %s\n", xrds->firstRD);
+	printf("\t secondRd: %s\n", xrds->secondRD);
+	printf("\t number of nodes found is: [ %d ] nodes.\n", xrds->nodesNum);
+	printf("\t Longitude and Latitude founds:\n");
+	for (int num = 0; num < xrds->nodesNum; num++)
+		printf("\t %10.7f, %10.7f\n", xrds->nodesGPS[num]->longitude,
+						xrds->nodesGPS[num]->latitude);
+	printf("\n");
+
+	return;
+
 }

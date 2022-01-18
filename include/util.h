@@ -134,4 +134,8 @@ int stringToUpper (char **dst, char *str);
 
 int stringToLower (char **dest, char *str);
 
+int mkOutputFile (char **dest, char *givenName, char *rootDir);
+
+FILE* openOutputFile (char *filename);
+
 #endif /* UTIL_H_ */
