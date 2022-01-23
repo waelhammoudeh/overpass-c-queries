@@ -80,7 +80,19 @@ int main(int argc, char* const argv[]) {
 	FILE		*outputFilePtr = NULL;
 	FILE		*wktFilePtr = NULL;
 
-	char		wktFileNameCSV[PATH_MAX] = {0};
+	char		wktFileNameExt[PATH_MAX] = {0}; // filename extension added
+
+	char		*wktNameOnly;
+	char 	*wktMidGpsName = NULL;
+	char		*wktBboxName;
+	char		tmpBuf[PATH_MAX];
+	FILE		*wktMidGpsFilePtr = NULL;
+	FILE		*wktBboxFilePtr = NULL;
+	DL_LIST	*bboxWktDL;
+	DL_LIST	*mgWktList;
+//	DL_LIST	*mgWktSessionList;
+
+	char		*bboxWktStr;
 
 	/* set prog_name .. lastOfPath() might get called with a path */
 	prog_name = lastOfPath (argv[0]);
@@ -169,6 +181,8 @@ int main(int argc, char* const argv[]) {
 
 		case 'W':
 
+			/* No path handling here! I expect file name only without path */
+			/****************** ^^^^^^^^^^^^^^^^^^ **************/
 			if ( ! IsGoodFileName(optarg) ){
 				fprintf (stderr, "%s: Error invalid file name specified for WKT: <%s>\n",
 						    prog_name, optarg);
@@ -176,13 +190,21 @@ int main(int argc, char* const argv[]) {
 				goto cleanup;
 			}
 
-			/* Note we add '.csv' extension to file name before we open it
+			/* Note we add '.wkt' extension to file name before we open it
 			 * only when user did not give it one. */
 			result = mkOutputFile (&wktFileName, optarg, progDir);
 			if (result != ztSuccess){
 				retCode = result;
 				goto cleanup;
 			}
+
+			wktNameOnly = DropExtension(wktFileName);
+
+			sprintf(tmpBuf, "%s_MidGps.wkt", wktNameOnly);
+			mkOutputFile (&wktMidGpsName, tmpBuf, progDir);
+
+			sprintf(tmpBuf, "%s_Bbox.wkt", wktNameOnly);
+			mkOutputFile (&wktBboxName, tmpBuf, progDir);
 
 			break;
 
@@ -294,6 +316,9 @@ int main(int argc, char* const argv[]) {
 	}
 
 	// check files
+	/* TODO do not allow wkt or csv extension in output file name.
+	 * do not use the same output file name twice.
+	 */
 	argvPtr= (char **) (argv + optind);
 	while (*argvPtr){
 
@@ -341,22 +366,35 @@ int main(int argc, char* const argv[]) {
 
 	if (wktFileName){
 
-		/* csv (comma separated variables) extension to output file name ONLY
-		 * when file name has no extension  */
-
+		/* when file name has no extension, we add "wkt" as extension to file name */
 		if (strrchr(wktFileName, '.'))
-			strcpy (wktFileNameCSV, wktFileName);
+			strcpy (wktFileNameExt, wktFileName);
 		else {
-			sprintf (wktFileNameCSV, "%s.csv", wktFileName);
-			fprintf (stdout, "%s: saving WKT output to file: %s\n", prog_name, wktFileNameCSV);
+			sprintf (wktFileNameExt, "%s.wkt", wktFileName);
+			fprintf (stdout, "%s: saving WKT output to file: %s\n", prog_name, wktFileNameExt);
 		}
 
-		wktFilePtr = openOutputFile (wktFileNameCSV);
+		wktFilePtr = openOutputFile (wktFileNameExt);
 		if ( ! wktFilePtr) {
 			fprintf (stderr, "%s: Error opening WKT output file: <%s>\n",
 			             prog_name, wktFileName);
 			return ztOpenFileError;
 		}
+
+		wktBboxFilePtr = openOutputFile (wktBboxName);
+		if ( ! wktBboxFilePtr) {
+			fprintf (stderr, "%s: Error opening WKT output file: <%s>\n",
+			             prog_name, wktBboxName);
+			return ztOpenFileError;
+		}
+
+		wktMidGpsFilePtr = openOutputFile (wktMidGpsName);
+		if ( ! wktMidGpsFilePtr) {
+			fprintf (stderr, "%s: Error opening WKT output file: <%s>\n",
+			             prog_name, wktMidGpsName);
+			return ztOpenFileError;
+		}
+
 	}
 
 	if (rawDataFileName){ // writing is done by curlGetXrdsGPS() in overpass.c
@@ -377,6 +415,20 @@ int main(int argc, char* const argv[]) {
 		return ztMemoryAllocate;
 	}
 	initialDL (xrdsSessionDL, zapXrds, NULL);
+
+	if (wktFilePtr){
+
+		bboxWktDL = (DL_LIST *) malloc(sizeof(DL_LIST));
+		if ( ! bboxWktDL ){
+			fprintf(stderr, "%s: Error allocating memory for bboxWktDL.\n",
+					prog_name);
+			return ztMemoryAllocate;
+		}
+		initialDL (bboxWktDL, zapString, NULL);
+		/* insert wkt; as first line */
+		insertNextDL (bboxWktDL, DL_TAIL(bboxWktDL), "wkt;");
+
+	}
 
 	/* done setting & parsing, now process each input file */
 	argvPtr = (char **) (argv + optind);
@@ -428,6 +480,12 @@ int main(int argc, char* const argv[]) {
 
 			retCode = result;
 			goto cleanup;
+		}
+
+		if (wktBboxFilePtr){
+
+			formatBboxWKT(&bboxWktStr, &bbox);
+			insertNextDL (bboxWktDL, DL_TAIL(bboxWktDL), bboxWktStr);
 		}
 
 		/* get cross road strings, parse them && stuff'em in a list */
@@ -492,17 +550,21 @@ int main(int argc, char* const argv[]) {
 	} // end  while (*argvPtr)
 
 
-	if (outputFilePtr) /* still show result on terminal */
+	if (outputFilePtr) /* still show result in terminal */
 		writeDL (NULL, xrdsSessionDL, writeXrds);
 
 	writeDL (outputFilePtr, xrdsSessionDL, writeXrds);
 
-	if (wktFileName){
+	if (wktFileName && wktFilePtr){
 
 		wktDL = (DL_LIST *) malloc (sizeof(DL_LIST));
-		initialDL(wktDL, NULL, NULL);
+		initialDL(wktDL, zapString, NULL);
 		xrds2WKT_DL (wktDL, xrdsSessionDL);
 		writeDL (wktFilePtr, wktDL, writeString2FP);
+
+		// should destroy list and free memory
+		fprintf (stdout, "Wrote Well Known Text to file: %s\n", wktFileNameExt);
+		fclose (wktFilePtr);
 
 	}
 
@@ -512,10 +574,33 @@ int main(int argc, char* const argv[]) {
 		fclose (outputFilePtr);
 	}
 
-	if (wktFilePtr) {
+	if (wktMidGpsName && wktMidGpsFilePtr){
 
-		fprintf (stdout, "Wrote Well Known Text to file: %s\n", wktFileNameCSV);
-		fclose (wktFilePtr);
+		mgWktList = (DL_LIST *) malloc(sizeof(DL_LIST));
+		if ( ! mgWktList ){
+			fprintf(stderr, "%s: Error allocating memory for mgWktList.\n",
+					prog_name);
+			return ztMemoryAllocate;
+		}
+		initialDL (mgWktList, zapString, NULL);
+
+		midGps2WKT_DL (mgWktList, xrdsSessionDL);
+
+		writeDL (wktMidGpsFilePtr, mgWktList, writeString2FP);
+
+		fprintf (stdout, "Wrote Mid-Point GPS Well Known Text to file: %s\n",
+				     wktMidGpsName);
+		fclose (wktMidGpsFilePtr);
+	}
+
+	if (wktBboxFilePtr){
+
+		writeDL (wktBboxFilePtr, bboxWktDL, writeString2FP);
+		// should destroy list and free memory too now
+		fclose (wktBboxFilePtr);
+
+		fprintf (stdout, "Wrote Bounding Box Polygon Well Known Text to file: %s\n",
+				     wktBboxName);
 	}
 
 	if (rawDataFP) {
@@ -601,6 +686,50 @@ int xrds2WKT_DL (DL_LIST *dstDL, DL_LIST *srcDL){
 
 } // END xrds2WKT_DL()
 
+/* midGps2WKT_DL(): function formats midGps member into Well Known Text
+ * from xrdsList and stores formatted string into destList. Caller initials destList.
+ */
+int midGps2WKT_DL (DL_LIST *destList, DL_LIST *xrdsList){
+
+	DL_ELEM	*elem;
+	XROADS	*xrds;
+	char			*wktString;
+	char			*wktMaker = "wkt;";
+
+	ASSERTARGS (destList && xrdsList);
+
+	if (DL_SIZE(xrdsList) == 0)
+
+		return ztListEmpty;
+
+	// start the list with wkt maker
+	insertNextDL (destList, DL_TAIL(destList), wktMaker);
+
+	elem = DL_HEAD(xrdsList);
+	while(elem){
+
+		xrds = (XROADS *) elem->data;
+
+		if (xrds->nodesNum){
+
+			wktString = gps2WKT (xrds->midGps);
+			if ( ! wktString ){
+
+				fprintf(stderr, "midGps2WKT_DL(): Error retuned from gps2WKT(). Exit.\n");
+				return ztUnknownError;
+			}
+
+			insertNextDL (destList, DL_TAIL(destList), wktString);
+		}
+
+		elem = DL_NEXT(elem);
+
+	} // end while(elem)
+
+
+	return ztSuccess;
+}
+
 /* appendDL () appends src list to dest list - assumes the data pointer in
  * element is for character string, no checking for that is done! */
 static int appendToDL (DL_LIST *dest, DL_LIST *src){
@@ -677,6 +806,7 @@ int curlGetXrdsDL (DL_LIST *xrdsDL, BBOX *bbox, CURLU *srvrURL){
 			fprintf(stderr, "curlGetXrdsDL(): Error returned from getXrdsGps() function\n\n");
 			return result;
 		}
+//printXrds(xrds);
 
 		elem = DL_NEXT(elem);
 

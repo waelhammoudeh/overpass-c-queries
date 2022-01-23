@@ -60,11 +60,29 @@ typedef struct BBOX_ {
 typedef struct XROADS_ {
 
 	char		*firstRD, *secondRD;
-	POINT	point;
+	POINT	*point;
 	int		nodesNum;
 	GPS		*nodesGPS[MAX_NODES];
+	GPS		*midGps;
 
 } XROADS;
+
+#define MAX_SRC_LENGTH  65
+#define MAX_ID_LENGTH  17
+
+typedef struct RECT_DATA_ {
+
+	char		srcFile[MAX_SRC_LENGTH];
+	char		idRxC[MAX_ID_LENGTH];
+
+} RECT_DATA;
+
+typedef struct RECTANGLE_ {
+
+	POINT		    nw, ne, se, sw;
+	RECT_DATA	data;
+
+}RECTANGLE;
 
 /* functions prototypes */
 

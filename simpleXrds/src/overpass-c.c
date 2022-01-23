@@ -44,7 +44,7 @@ char *xrdsFillTemplate (XROADS *xrds, BBOX *bbox){
 
 	ASSERTARGS (xrds && bbox);
 
-	// the two roads members should be set in the struct
+	// the two roads members should be set in the structure
 	ASSERTARGS(xrds->firstRD && xrds->secondRD);
 
 	// remove leading and trailing white space
@@ -223,13 +223,16 @@ int cpyXrds (XROADS *dest, XROADS *src){
 	if (src->secondRD)
 		dest->secondRD = strdup(src->secondRD);
 
-	memcpy (&(dest->point), &(src->point), sizeof(POINT));
+	memcpy (dest->point, src->point, sizeof(POINT));
+
 	dest->nodesNum = src->nodesNum;
 
-	for (num = 0; num < src->nodesNum; num++){
-		dest->nodesGPS[num]->longitude = src->nodesGPS[num]->longitude;
-		dest->nodesGPS[num]->latitude = src->nodesGPS[num]->latitude;
-	}
+	for (num = 0; num < src->nodesNum; num++)
+
+		memcpy(dest->nodesGPS[num], src->nodesGPS[num], sizeof(GPS));
+
+
+	memcpy(dest->midGps, src->midGps, sizeof(GPS));
 
 	return ztSuccess;
 }
@@ -247,6 +250,10 @@ XROADS * initialXrds (char *firstRd, char *secondRd){
 		return newXrd;
 	}
 
+	memset(newXrd, 0, sizeof(XROADS));
+
+	newXrd->point = (POINT *) malloc(sizeof(POINT));
+
 	for (int num = 0; num < MAX_NODES; num++){
 
 		newXrd->nodesGPS[num] = (GPS *) malloc(sizeof(GPS));
@@ -255,6 +262,13 @@ XROADS * initialXrds (char *firstRd, char *secondRd){
 			newXrd = NULL;
 			return newXrd;
 		}
+	}
+
+	newXrd->midGps = (GPS *) malloc(sizeof(GPS));
+	if ( ! newXrd->midGps){
+		fprintf(stderr, "initialXrds(): Error allocating memory.\n");
+		newXrd = NULL;
+		return newXrd;
 	}
 
 	if (firstRd && secondRd){

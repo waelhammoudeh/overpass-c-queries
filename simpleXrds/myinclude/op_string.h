@@ -37,4 +37,12 @@ void writeString2FP (FILE *to, void *str);
 
 void printXrds(XROADS *xrds);
 
+void printXrdsDL (DL_LIST *srcDL);
+
+int formatBboxWKT (char **dest, BBOX *bbox);
+
+int bbox2Rectangle(RECTANGLE *destRect, BBOX *bbox);
+
+int formatRectWKT (char **dest, RECTANGLE *rect);
+
 #endif /* OP_STRING_H_ */

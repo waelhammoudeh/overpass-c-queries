@@ -262,7 +262,10 @@ int parseGPS (GPS *dst, char *str){
 	return ztSuccess;
 }
 
-
+/* parseCurlXrdsData() parses overpass query result, fills members:
+ * nodesNum, nodesGps[i] and calculates/fills midGps. It also copies
+ * calculated midGps to gps in point member.
+ */
 
 int parseCurlXrdsData (XROADS *xrds, void *data){
 
@@ -384,6 +387,8 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 	int				numFound;
 	char				*str;
 	int				iCount, result;
+	double		totalLongitude, totalLatitude;
+	double		avrgLongitude, avrgLatitude;
 
 	ASSERTARGS (dstXrds && srcDL);
 
@@ -408,6 +413,7 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 	 elem = DL_HEAD(srcDL);
 	 elem = DL_NEXT(elem); // second line
 
+	 totalLongitude = totalLatitude = 0.0;
 	 for (iCount = 0; iCount < numFound; iCount++, elem = DL_NEXT(elem)){
 
 		 ASSERTARGS (elem);
@@ -421,11 +427,28 @@ int parseXrdsResult (XROADS *dstXrds, DL_LIST *srcDL){
 			 return result;
 		 }
 
+		 totalLongitude += dstXrds->nodesGPS[iCount]->longitude;
+		 totalLatitude += dstXrds->nodesGPS[iCount]->latitude;
+
 	 }
 
-	 // set XRDOADS point member to first GPS found
-	 dstXrds->point.gps.longitude = dstXrds->nodesGPS[0]->longitude;
-	 dstXrds->point.gps.latitude= dstXrds->nodesGPS[0]->latitude;
+	 if (numFound == 1){
+
+		 avrgLongitude = dstXrds->nodesGPS[0]->longitude;
+		 avrgLatitude = dstXrds->nodesGPS[0]->latitude;
+	 }
+	 else {
+
+		 avrgLongitude = totalLongitude / numFound;
+		 avrgLatitude = totalLatitude / numFound;
+	 }
+
+	 dstXrds->midGps->longitude = avrgLongitude;
+	 dstXrds->midGps->latitude = avrgLatitude;
+
+	 // set XRDOADS gps in point member to calculated averages
+	 dstXrds->point->gps.longitude = avrgLongitude;
+	 dstXrds->point->gps.latitude= avrgLatitude;
 
 	 return ztSuccess;
 }
@@ -475,9 +498,9 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 	FILE	*filePtr;
 	char		namesBuf[100] = {0};
 	char		pointBuf[36] = {0};
-	char		buf[LONG_LINE] = {0};
+//	char		buf[LONG_LINE] = {0};
 	char		*notFound = "------- Not Found -------";
-	//char		*separater = "------------------------------";
+	char		*dashLine = "--------------------------------------------------------------------------------\n";
 
 	XROADS	*xrds;
 
@@ -493,16 +516,17 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 
 	xrds = (XROADS *) data;
 
-	if (xrds->nodesNum == 0)
+	/* make names string */
+	sprintf (namesBuf, "%s, %s", xrds->firstRD, xrds->secondRD);
+	fprintf (filePtr, "%s\n", namesBuf);
+
+	if (xrds->nodesNum == 0) {
 
 		sprintf (pointBuf, notFound);
-
-	sprintf (namesBuf, "%s, %s", xrds->firstRD, xrds->secondRD);
-	iCount = 78 - (int) strlen(namesBuf);
-	if (snprintf (buf, 100, "%s  %*s", namesBuf, iCount, pointBuf) > 100)
-		sprintf (buf, "%s  %s", namesBuf, pointBuf);
-
-	fprintf (filePtr, "%s\n", buf);
+		fprintf (filePtr, "%80s\n", pointBuf);
+		fprintf(filePtr, dashLine);
+		return;
+	}
 
 	for (iCount = 0; iCount < xrds->nodesNum; iCount++){
 
@@ -511,11 +535,16 @@ void writeXrds (FILE *file, void *data){ // partial - half-assed job
 				xrds->nodesGPS[iCount]->latitude);
 
 		fprintf (filePtr, "%80s\n", pointBuf);
-
 	}
-	//fprintf (filePtr, "-------------------------------------------------------------------------------\n");
-	fprintf (filePtr, " ...............................................................................\n");
+	sprintf(pointBuf, "------- -------- -------");
+	fprintf (filePtr, "%80s\n", pointBuf);
 
+
+	sprintf(namesBuf, "Mid-Point / Average: {%10.7f, %10.7f}",
+			    xrds->midGps->longitude, xrds->midGps->latitude);
+	fprintf (filePtr, "%80s\n", namesBuf);
+
+	fprintf(filePtr, dashLine);
 
 	return;
 
@@ -589,7 +618,7 @@ void printXrds(XROADS *xrds){
 	ASSERTARGS(xrds);
 
 	printf("printXrds(): cross roads members:\n");
-	printf("\t firstRd: %s\n", xrds->firstRD);
+	printf("\t firstRd : %s\n", xrds->firstRD);
 	printf("\t secondRd: %s\n\n", xrds->secondRD);
 	printf("\t number of nodes found : [ %d ] nodes.\n\n", xrds->nodesNum);
 	printf("\t Longitude and Latitude founds:\n");
@@ -597,7 +626,99 @@ void printXrds(XROADS *xrds){
 		printf("\t %10.7f, %10.7f\n", xrds->nodesGPS[num]->longitude,
 						xrds->nodesGPS[num]->latitude);
 	printf("\n");
+	printf("\t midGps members [ Longitude and Latitude ]\n");
+	printf("\t [%10.7f, %10.7f]\n", xrds->midGps->longitude, xrds->midGps->latitude);
+	printf("\n");
+
+	printf("\t GPS in point members [ Longitude and Latitude ]\n");
+	printf("\t [%10.7f, %10.7f]\n", xrds->point->gps.longitude, xrds->point->gps.latitude);
+	printf("\n");
 
 	return;
 
+}
+
+void printXrdsDL (DL_LIST *srcDL){
+
+	DL_ELEM		*elem;
+	XROADS		*xrds;
+
+	ASSERTARGS(srcDL);
+
+	elem = DL_HEAD(srcDL);
+
+	while (elem){
+
+		xrds = DL_DATA(elem);
+
+		ASSERTARGS(xrds);
+
+		printXrds(xrds);
+
+		writeXrds (NULL, (void*) xrds);
+
+		elem = DL_NEXT(elem);
+	}
+
+	return;
+}
+
+int formatRectWKT (char **dest, RECTANGLE *rect){
+
+	char		buffer[LONG_LINE] = {0};
+	int		sizeNeeded;
+
+	ASSERTARGS (dest && rect);
+
+	sprintf (buffer, "\"POLYGON ((%11.7f %10.7f, %11.7f %10.7f, %11.7f %10.7f, %11.7f %10.7f, %11.7f %10.7f))\"",
+				     rect->sw.gps.longitude, rect->sw.gps.latitude,
+					 rect->nw.gps.longitude, rect->nw.gps.latitude,
+					 rect->ne.gps.longitude, rect->ne.gps.latitude,
+					 rect->se.gps.longitude, rect->se.gps.latitude,
+					 rect->sw.gps.longitude, rect->sw.gps.latitude);
+
+	sizeNeeded = strlen(buffer) * sizeof(char) + 1;
+
+	*dest = (char *) malloc (sizeof(char) * sizeNeeded);
+	if ( *dest == NULL) {
+		printf("formatRectWKT(): Error allocating memory.\n");
+		return ztMemoryAllocate;
+	}
+
+	strcpy(*dest, buffer);
+
+	return ztSuccess;
+}
+
+int bbox2Rectangle(RECTANGLE *destRect, BBOX *bbox){
+
+
+	ASSERTARGS(destRect && bbox);
+
+	destRect->sw = bbox->sw;
+	destRect->ne = bbox->ne;
+
+	destRect->nw.gps.longitude = bbox->sw.gps.longitude;
+	destRect->nw.gps.latitude= bbox->ne.gps.latitude;
+
+	destRect->se.gps.longitude = bbox->ne.gps.longitude;
+	destRect->se.gps.latitude = bbox->sw.gps.latitude;
+
+	return ztSuccess;
+}
+
+int formatBboxWKT (char **dest, BBOX *bbox){
+
+	RECTANGLE		rect;
+	char		*formatedStr;
+
+	ASSERTARGS (dest && bbox);
+
+	bbox2Rectangle(&rect, bbox);
+
+	formatRectWKT (&formatedStr, &rect);
+
+	*dest = formatedStr;
+
+	return ztSuccess;
 }
