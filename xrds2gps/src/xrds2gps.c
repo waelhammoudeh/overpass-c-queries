@@ -181,8 +181,6 @@ int main(int argc, char* const argv[]) {
 
 		case 'W':
 
-			/* No path handling here! I expect file name only without path */
-			/****************** ^^^^^^^^^^^^^^^^^^ **************/
 			if ( ! IsGoodFileName(optarg) ){
 				fprintf (stderr, "%s: Error invalid file name specified for WKT: <%s>\n",
 						    prog_name, optarg);
@@ -372,6 +370,13 @@ int main(int argc, char* const argv[]) {
 		else {
 			sprintf (wktFileNameExt, "%s.wkt", wktFileName);
 			fprintf (stdout, "%s: saving WKT output to file: %s\n", prog_name, wktFileNameExt);
+		}
+
+		if (outputFileName && (strcmp(outputFileName, wktFileNameExt) == 0)){
+
+			fprintf(stderr, "%s Error: Same file name used for output option and wktFileName: <%s>\n\n",
+					prog_name, wktFileNameExt);
+			return ztInvalidArg;
 		}
 
 		wktFilePtr = openOutputFile (wktFileNameExt);
