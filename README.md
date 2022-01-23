@@ -49,6 +49,25 @@ README.md file.
    An overpass query to retrieve street / road names within a specified 
  bounding box. The query is implemented by getStreetNames() function.
 
+Update on January 23rd 2022:
+
+Modified xrds2gps program, removed call to "get street names".
+Modified overpass structures and type definition.
+Added midGps pointer to XROADS stucture, average of gps for found nodes is
+calculatted and stored for each XROADS.
+Added inputput files examples: example.big, example.lower and example.upper.
+The "big" file is split into two files with "lower" has the south part of big with
+smaller bounding box and the names of cross roads in that box. The same thing
+applies to "upper" but for the north half of big. The following 2 commands produce
+the same results:
+
+ $ ./xrds2gps  example.big
+ $ ./xrds2gps example.lower example.upper
+
+Well Known Text output have been changed to show midGps and bounding box from
+input files. Give that option a try with "-W" as in [ -W filename ].
+
+End January 23rd update.
 
 Last; nothing is perfect and everything can be improved.
 
